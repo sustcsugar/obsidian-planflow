@@ -673,7 +673,7 @@ export const WeekViewClasses = {
 		today: bem(BLOCKS.WEEK_VIEW, 'header-cell', 'today'),
 		tasksColumnToday: bem(BLOCKS.WEEK_VIEW, 'tasks-column', 'today'),
 		timeline: bem(BLOCKS.WEEK_VIEW, undefined, 'timeline'),
-		dragOver: bem(BLOCKS.WEEK_VIEW, 'time-slot', 'drag-over'),
+		dragOver: bem(BLOCKS.WEEK_VIEW, 'row', 'drag-over'),
 	},
 };
 

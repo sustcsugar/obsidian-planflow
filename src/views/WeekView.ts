@@ -21,6 +21,12 @@ export class WeekViewRenderer extends BaseViewRenderer {
 	// 设置前缀
 	private readonly SETTINGS_PREFIX = 'weekView';
 
+	// 时间轴模式持久化标志（一旦激活，会话内保持）
+	private timelineActive: boolean = false;
+
+	// 当前渲染日期（供 refreshTasks 使用）
+	private currentDate: Date = new Date();
+
 	// 时间轴专用配置（启用拖拽）
 	private timelineTaskConfig: TaskCardConfig = {
 		...WeekViewConfig,
@@ -113,8 +119,9 @@ export class WeekViewRenderer extends BaseViewRenderer {
 
 	render(container: HTMLElement, currentDate: Date): void {
 		const weekData = getWeekOfDate(currentDate, currentDate.getFullYear(), !!(this.plugin?.settings?.startOnMonday));
+		const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
-		// 清空容器，避免重复渲染时嵌套
+		// 清空容器
 		container.empty();
 
 		const weekContainer = container.createDiv('gc-view gc-view--week');
@@ -130,33 +137,12 @@ export class WeekViewRenderer extends BaseViewRenderer {
 		const allRealTasks = this.applyTagFilter(
 			this.applyStatusFilter(this.plugin.taskCache.getAllTasks())
 		);
-		const useTimeline = this.hasTimedTasks(allRealTasks, weekStart, weekEnd);
+		const hasTimed = this.hasTimedTasks(allRealTasks, weekStart, weekEnd);
+		if (hasTimed) this.timelineActive = true;
+		const useTimeline = this.timelineActive;
 
-		if (useTimeline) {
-			weekContainer.addClass(WeekViewClasses.modifiers.timeline);
-		}
-
-		// 标题行
-		const headerRow = weekGrid.createDiv(WeekViewClasses.elements.headerRow);
-		if (useTimeline) {
-			// 时间轴模式下添加左侧占位单元格
-			headerRow.createDiv(WeekViewClasses.elements.headerSpacer);
-		}
-		const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-		weekData.days.forEach((day) => {
-			const dayHeader = headerRow.createDiv(WeekViewClasses.elements.headerCell);
-			dayHeader.createEl('div', { text: dayNames[day.weekday], cls: WeekViewClasses.elements.dayName });
-			dayHeader.createEl('div', { text: day.day.toString(), cls: WeekViewClasses.elements.dayNumber });
-			if (day.lunarText) {
-				dayHeader.createEl('div', { text: day.lunarText, cls: WeekViewClasses.elements.lunarText });
-			}
-			if (day.isToday) {
-				dayHeader.addClass(WeekViewClasses.modifiers.today);
-			}
-		});
-
-		// 任务网格
-		const tasksGrid = weekGrid.createDiv(WeekViewClasses.elements.tasksGrid);
+		// 保存当前渲染日期
+		this.currentDate = new Date(currentDate);
 
 		// 预生成整周的虚拟周期实例
 		const allVirtualInstances = generateVirtualInstances(
@@ -164,25 +150,119 @@ export class WeekViewRenderer extends BaseViewRenderer {
 		);
 
 		if (useTimeline) {
-			this.renderTimelineLayout(tasksGrid, weekData, allRealTasks, allVirtualInstances, dateField);
+			weekContainer.addClass(WeekViewClasses.modifiers.timeline);
+			this.renderTimelineMode(weekGrid, weekData, dayNames, allRealTasks, allVirtualInstances, dateField);
 		} else {
-			this.renderFlatLayout(tasksGrid, weekData, allVirtualInstances);
+			this.renderFlatMode(weekGrid, weekData, dayNames, allVirtualInstances);
 		}
 	}
 
 	/**
-	 * 渲染扁平列表布局（无定时任务时使用）
+	 * 渲染时间轴模式：header、时间标尺、任务格全部放在同一个 grid 中
 	 */
-	private renderFlatLayout(
-		tasksGrid: HTMLElement,
+	private renderTimelineMode(
+		weekGrid: HTMLElement,
 		weekData: { days: CalendarDay[] },
+		dayNames: string[],
+		allRealTasks: GCTask[],
+		allVirtualInstances: GCTask[],
+		dateField: string
+	): void {
+		const W = WeekViewClasses;
+
+		// 所有内容放在同一个 tasksGrid 中（单一 grid 保证对齐）
+		const tasksGrid = weekGrid.createDiv(W.elements.tasksGrid);
+
+		// === 第一行：header（sticky） ===
+		const spacer = tasksGrid.createDiv(W.elements.headerSpacer);
+			spacer.style.gridColumn = '1';
+			spacer.style.gridRow = '1';
+
+		weekData.days.forEach((day, dayIdx) => {
+			const dayHeader = tasksGrid.createDiv(W.elements.headerCell);
+			dayHeader.style.gridColumn = `${dayIdx + 2}`;
+			dayHeader.style.gridRow = '1';
+			dayHeader.createEl('div', { text: dayNames[day.weekday], cls: W.elements.dayName });
+			dayHeader.createEl('div', { text: day.day.toString(), cls: W.elements.dayNumber });
+			if (day.lunarText) {
+				dayHeader.createEl('div', { text: day.lunarText, cls: W.elements.lunarText });
+			}
+			if (day.isToday) {
+				dayHeader.addClass(W.modifiers.today);
+			}
+		});
+
+		// === 第 2-25 行：时间标尺 + 七列时间格 ===
+		// 保存每列每小时的任务容器引用
+		const slotContainers: HTMLElement[][] = [];
+		// 保存每行所有元素的引用（用于整行高亮）
+		const rowElements: HTMLElement[][] = [];
+
+		// 时间标尺（第 1 列）
+		for (let h = 0; h <= 23; h++) {
+			const gutterSlot = tasksGrid.createDiv(W.elements.timeGutterSlot);
+			gutterSlot.style.gridColumn = '1';
+			gutterSlot.style.gridRow = `${h + 2}`;
+			gutterSlot.createDiv(W.elements.timeGutterLabel)
+				.setText(`${String(h).padStart(2, '0')}:00`);
+			rowElements[h] = [gutterSlot];
+		}
+
+		// 七列时间格（第 2-8 列）
+		weekData.days.forEach((day, dayIdx) => {
+			slotContainers[dayIdx] = [];
+			for (let h = 0; h <= 23; h++) {
+				const slot = tasksGrid.createDiv(W.elements.timeSlot);
+				slot.style.gridColumn = `${dayIdx + 2}`;
+				slot.style.gridRow = `${h + 2}`;
+				const tasksEl = slot.createDiv(W.elements.timeTasks);
+				slotContainers[dayIdx][h] = tasksEl;
+				rowElements[h].push(slot);
+
+				this.setupDragDropForTimeSlot(slot, h, day.date, rowElements[h]);
+			}
+		});
+
+		// 填充任务到对应时间格
+		weekData.days.forEach((day, dayIdx) => {
+			this.populateTimelineSlots(
+				slotContainers[dayIdx], day.date, allRealTasks, allVirtualInstances, dateField
+			);
+		});
+	}
+
+	/**
+	 * 渲染扁平列表模式（无定时任务时使用）
+	 */
+	private renderFlatMode(
+		weekGrid: HTMLElement,
+		weekData: { days: CalendarDay[] },
+		dayNames: string[],
 		allVirtualInstances: GCTask[]
 	): void {
+		const W = WeekViewClasses;
+
+		// 标题行
+		const headerRow = weekGrid.createDiv(W.elements.headerRow);
 		weekData.days.forEach((day) => {
-			const dayTasksColumn = tasksGrid.createDiv(WeekViewClasses.elements.tasksColumn);
+			const dayHeader = headerRow.createDiv(W.elements.headerCell);
+			dayHeader.createEl('div', { text: dayNames[day.weekday], cls: W.elements.dayName });
+			dayHeader.createEl('div', { text: day.day.toString(), cls: W.elements.dayNumber });
+			if (day.lunarText) {
+				dayHeader.createEl('div', { text: day.lunarText, cls: W.elements.lunarText });
+			}
+			if (day.isToday) {
+				dayHeader.addClass(W.modifiers.today);
+			}
+		});
+
+		// 任务网格
+		const tasksGrid = weekGrid.createDiv(W.elements.tasksGrid);
+		weekData.days.forEach((day) => {
+			const dayTasksColumn = tasksGrid.createDiv(W.elements.tasksColumn);
 			dayTasksColumn.dataset.date = toISOStringLocal(day.date);
 			if (day.isToday) {
-				dayTasksColumn.addClass(WeekViewClasses.modifiers.tasksColumnToday);
+				dayTasksColumn.addClass(W.modifiers.tasksColumnToday);
 			}
 
 			this.loadWeekViewTasks(dayTasksColumn, day.date, allVirtualInstances);
@@ -191,52 +271,10 @@ export class WeekViewRenderer extends BaseViewRenderer {
 	}
 
 	/**
-	 * 渲染时间轴布局（有定时任务时使用）
+	 * 填充时间轴任务到指定列的时间格
 	 */
-	private renderTimelineLayout(
-		tasksGrid: HTMLElement,
-		weekData: { days: CalendarDay[] },
-		allRealTasks: GCTask[],
-		allVirtualInstances: GCTask[],
-		dateField: string
-	): void {
-		const W = WeekViewClasses;
-
-		// 左侧时间标尺
-		const timeGutter = tasksGrid.createDiv(W.elements.timeGutter);
-		for (let h = 0; h <= 23; h++) {
-			const gutterSlot = timeGutter.createDiv(W.elements.timeGutterSlot);
-			gutterSlot.createDiv(W.elements.timeGutterLabel)
-				.setText(`${String(h).padStart(2, '0')}:00`);
-		}
-
-		// 七列日期列
-		weekData.days.forEach((day) => {
-			const dayColumn = tasksGrid.createDiv(W.elements.tasksColumn);
-			dayColumn.dataset.date = toISOStringLocal(day.date);
-			if (day.isToday) {
-				dayColumn.addClass(W.modifiers.tasksColumnToday);
-			}
-
-			// 为每列创建 24 个时间格
-			for (let h = 0; h <= 23; h++) {
-				const slot = dayColumn.createDiv(W.elements.timeSlot);
-				slot.createDiv(W.elements.timeTasks);
-
-				// 设置时间格的拖放功能
-				this.setupDragDropForTimeSlot(slot, h, day.date, tasksGrid);
-			}
-
-			// 填充任务到对应时间格
-			this.loadWeekViewTimelineTasks(dayColumn, day.date, allRealTasks, allVirtualInstances, dateField);
-		});
-	}
-
-	/**
-	 * 加载周视图时间轴任务（将任务分配到对应时间格）
-	 */
-	private loadWeekViewTimelineTasks(
-		dayColumn: HTMLElement,
+	private populateTimelineSlots(
+		slotContainers: HTMLElement[],
 		targetDate: Date,
 		allRealTasks: GCTask[],
 		allVirtualInstances: GCTask[],
@@ -255,7 +293,6 @@ export class WeekViewRenderer extends BaseViewRenderer {
 			return taskDate.getTime() === normalizedTarget.getTime();
 		});
 
-		// 添加虚拟周期实例
 		const virtualForDay = allVirtualInstances.filter(task => {
 			const dateValue = (task as any)[dateField];
 			if (!dateValue) return false;
@@ -285,21 +322,13 @@ export class WeekViewRenderer extends BaseViewRenderer {
 			tasksByHour.get(hour)!.push(task);
 		}
 
-		// 填充时间格
-		const W = WeekViewClasses;
-		const slotClassName = W.elements.timeSlot.split(' ').pop()!;
-		const timeTasksClassName = W.elements.timeTasks.split(' ').pop()!;
-		const slots = dayColumn.querySelectorAll(`.${slotClassName}`);
-
+		// 填充到对应容器
 		for (let h = 0; h <= 23; h++) {
-			const slot = slots[h] as HTMLElement;
-			if (!slot) continue;
-			const tasksContainer = slot.querySelector(`.${timeTasksClassName}`) as HTMLElement;
-			if (!tasksContainer) continue;
-
+			const container = slotContainers[h];
+			if (!container) continue;
 			const hourTasks = tasksByHour.get(h) || [];
 			hourTasks.forEach(task => {
-				this.renderTimelineTaskItem(task, tasksContainer, targetDate);
+				this.renderTimelineTaskItem(task, container, targetDate);
 			});
 		}
 	}
@@ -308,9 +337,18 @@ export class WeekViewRenderer extends BaseViewRenderer {
 	 * 渲染时间轴任务项（启用拖拽）
 	 */
 	private renderTimelineTaskItem(task: GCTask, container: HTMLElement, targetDate: Date): void {
+		const config = {
+			...WeekViewConfig,
+			enableDrag: true,
+			showCheckbox: this.plugin.settings.weekViewShowCheckbox,
+			showTags: this.plugin.settings.weekViewShowTags,
+			showPriority: this.plugin.settings.weekViewShowPriority,
+			showTicktick: this.plugin.settings.weekViewShowTicktick,
+		};
+
 		new TaskCardComponent({
 			task,
-			config: this.timelineTaskConfig,
+			config,
 			container,
 			app: this.app,
 			plugin: this.plugin,
@@ -326,24 +364,33 @@ export class WeekViewRenderer extends BaseViewRenderer {
 	/**
 	 * 设置时间格的拖放功能
 	 */
-	private setupDragDropForTimeSlot(slot: HTMLElement, hour: number, targetDate: Date, tasksGrid: HTMLElement): void {
+	private setupDragDropForTimeSlot(slot: HTMLElement, hour: number, targetDate: Date, rowEls: HTMLElement[]): void {
+		let highlighted = false;
+
 		slot.addEventListener('dragover', (e: DragEvent) => {
 			e.preventDefault();
 			if (e.dataTransfer) {
 				e.dataTransfer.dropEffect = 'move';
 			}
-			slot.addClass(WeekViewClasses.modifiers.dragOver);
+			if (!highlighted) {
+				rowEls.forEach(el => el.addClass(WeekViewClasses.modifiers.dragOver));
+				highlighted = true;
+			}
 		});
 
 		slot.addEventListener('dragleave', (e: DragEvent) => {
 			if (e.target === slot) {
-				slot.removeClass(WeekViewClasses.modifiers.dragOver);
+				rowEls.forEach(el => el.removeClass(WeekViewClasses.modifiers.dragOver));
+				highlighted = false;
 			}
 		});
 
 		slot.addEventListener('drop', async (e: DragEvent) => {
 			e.preventDefault();
-			slot.removeClass(WeekViewClasses.modifiers.dragOver);
+			if (highlighted) {
+				rowEls.forEach(el => el.removeClass(WeekViewClasses.modifiers.dragOver));
+				highlighted = false;
+			}
 
 			const taskId = e.dataTransfer?.getData('taskId');
 			if (!taskId) return;
@@ -367,7 +414,7 @@ export class WeekViewRenderer extends BaseViewRenderer {
 				const newDate = new Date(targetDate);
 				newDate.setHours(hour, 0, 0, 0);
 
-				// 更新 datePrecision 为 time（拖拽到时间格表示设定了时间）
+				// 更新 datePrecision 为 time
 				sourceTask.datePrecision = { ...sourceTask.datePrecision, [dateFieldName]: 'time' };
 
 				await updateTaskDateField(
@@ -387,7 +434,7 @@ export class WeekViewRenderer extends BaseViewRenderer {
 	}
 
 	/**
-	 * 增量刷新：只重新加载任务内容，不重建DOM
+	 * 增量刷新
 	 */
 	public refreshTasks(): void {
 		const container = document.querySelector('.gc-view.gc-view--week') as HTMLElement;
@@ -399,7 +446,7 @@ export class WeekViewRenderer extends BaseViewRenderer {
 			// 时间轴模式需要完全重新渲染
 			const viewContainer = container.parentElement;
 			if (viewContainer) {
-				this.render(viewContainer, this.plugin.calendarView?.getCurrentDate?.() || new Date());
+				this.render(viewContainer, this.currentDate);
 			}
 		} else {
 			// 扁平列表模式增量刷新

@@ -217,7 +217,7 @@ export class TooltipManager {
 					this.createTimeItem(this.cachedElements.times, '➕ 创建:', formatDate(task.createdDate, task.datePrecision?.createdDate === 'time' ? 'yyyy-MM-dd HH:mm' : 'yyyy-MM-dd'));
 				}
 				if (task.startDate) {
-					this.createTimeItem(this.cachedElements.times, '🛫 开始:', formatDate(task.startDate, 'yyyy-MM-dd'));
+					this.createTimeItem(this.cachedElements.times, '🛫 开始:', formatDate(task.startDate, task.datePrecision?.startDate === 'time' ? 'yyyy-MM-dd HH:mm' : 'yyyy-MM-dd'));
 				}
 				if (task.scheduledDate) {
 					this.createTimeItem(this.cachedElements.times, '⏳ 计划:', formatDate(task.scheduledDate, task.datePrecision?.scheduledDate === 'time' ? 'yyyy-MM-dd HH:mm' : 'yyyy-MM-dd'));
@@ -226,7 +226,7 @@ export class TooltipManager {
 					const isOverdue = task.dueDate < new Date() && !task.completed;
 					const cls = isOverdue ? 'gc-task-tooltip__time-item gc-task-tooltip__time-item--overdue' : 'gc-task-tooltip__time-item';
 					const div = this.cachedElements.times.createDiv(cls);
-					div.setText(`📅 截止: ${formatDate(task.dueDate, 'yyyy-MM-dd')}`);
+					div.setText(`📅 截止: ${formatDate(task.dueDate, task.datePrecision?.dueDate === 'time' ? 'yyyy-MM-dd HH:mm' : 'yyyy-MM-dd')}`);
 				}
 				if (task.cancelledDate) {
 					this.createTimeItem(this.cachedElements.times, '❌ 取消:', formatDate(task.cancelledDate, task.datePrecision?.cancelledDate === 'time' ? 'yyyy-MM-dd HH:mm' : 'yyyy-MM-dd'));

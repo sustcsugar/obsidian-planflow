@@ -257,12 +257,16 @@ export class GCMainView extends ItemView {
 
 	// ===== 公共方法供子渲染器调用 =====
 
-	public selectDate(date: Date): void {
+ public selectDate(date: Date): void {
 		this.currentDate = new Date(date);
 		if (this.viewType !== 'day') {
 			this.viewType = 'day';
 		}
 		this.render();
+	}
+
+	public getCurrentDate(): Date {
+		return this.currentDate;
 	}
 
 	public switchView(type: CalendarViewType): void {

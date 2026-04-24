@@ -1936,41 +1936,49 @@ Author: sugar
 
 /* ==================== Week View Timeline ==================== */
 /* 周视图时间轴模式 - 当周内有定时任务时激活 */
-.gc-week-view--timeline .gc-week-view__header-row {
+/* 核心：header + 时间标尺 + 任务格全部在同一 grid 中，保证行列完美对齐 */
+.gc-week-view--timeline .gc-week-view__tasks-grid {
+	display: grid;
 	grid-template-columns: 48px repeat(7, 1fr);
+	grid-template-rows: 52px repeat(24, max-content);
+	overflow-y: auto;
+	overflow-x: hidden;
+	flex: 1 1 auto;
+	min-height: 0;
+	position: relative;
 }
 
+/* Header 占位格（第 1 列第 1 行） */
 .gc-week-view__header-spacer {
 	border-right: 1px solid var(--background-modifier-border);
 	border-bottom: 2px solid var(--background-modifier-border);
 	background-color: var(--background-primary);
 	position: sticky;
 	top: 0;
-	z-index: 4;
+	z-index: 5;
 }
 
-.gc-week-view--timeline .gc-week-view__tasks-grid {
-	display: flex;
-	flex-direction: row;
-}
-
-.gc-week-view__time-gutter {
-	width: 48px;
-	flex-shrink: 0;
-	border-right: 1px solid var(--background-modifier-border);
+/* 时间轴模式下 header cell（sticky） */
+.gc-week-view--timeline .gc-week-view__header-cell {
+	position: sticky;
+	top: 0;
+	z-index: 5;
 	background-color: var(--background-primary);
 }
 
+/* 时间标尺格（第 1 列，第 2-25 行） */
 .gc-week-view__time-gutter-slot {
-	height: 48px;
 	display: flex;
 	align-items: flex-start;
 	justify-content: flex-end;
 	padding: 2px 6px 0 0;
+	min-height: 36px;
 	border-top: 1px solid var(--background-modifier-border);
+	background-color: var(--background-primary);
+	border-right: 1px solid var(--background-modifier-border);
 }
 
-.gc-week-view__time-gutter-slot:first-child {
+.gc-week-view__time-gutter-slot:first-of-type {
 	border-top: none;
 }
 
@@ -1980,24 +1988,16 @@ Author: sugar
 	font-variant-numeric: tabular-nums;
 }
 
-.gc-week-view--timeline .gc-week-view__tasks-column {
-	padding: 0;
-	overflow-y: visible;
-	display: flex;
-	flex-direction: column;
-}
-
+/* 任务时间格（第 2-8 列，第 2-25 行） */
 .gc-week-view__time-slot {
 	display: flex;
 	flex-direction: column;
 	gap: 2px;
 	padding: 2px 4px;
-	min-height: 48px;
+	min-height: 36px;
 	border-top: 1px solid var(--background-modifier-border);
-}
-
-.gc-week-view__time-slot:first-child {
-	border-top: none;
+	border-right: 1px solid var(--background-modifier-border);
+	overflow: visible;
 }
 
 .gc-week-view__time-tasks {
@@ -2006,7 +2006,7 @@ Author: sugar
 	gap: 2px;
 }
 
-.gc-week-view__time-slot--drag-over {
+.gc-week-view__row--drag-over {
 	background-color: var(--background-modifier-hover);
 	transition: background-color 0.15s ease;
 }
