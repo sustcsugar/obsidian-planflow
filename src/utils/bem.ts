@@ -205,6 +205,7 @@ export const DayViewClasses = {
 		sectionTasks: bem(BLOCKS.DAY_VIEW, 'section', 'tasks'),
 		sectionNotes: bem(BLOCKS.DAY_VIEW, 'section', 'notes'),
 		title: bem(BLOCKS.DAY_VIEW, 'title'),
+		notesHeader: bem(BLOCKS.DAY_VIEW, 'notes-header'),
 		taskList: bem(BLOCKS.DAY_VIEW, 'task-list'),
 		notesContent: bem(BLOCKS.DAY_VIEW, 'notes-content'),
 		notesBody: bem(BLOCKS.DAY_VIEW, 'notes-body'),
@@ -227,6 +228,9 @@ export const DayViewClasses = {
  */
 export const EmbeddedEditorClasses = {
     block: bem(BLOCKS.EMBEDDED_EDITOR),
+    elements: {
+        modeToggle: bem(BLOCKS.EMBEDDED_EDITOR, 'mode-toggle'),
+    },
 };
 
 /**

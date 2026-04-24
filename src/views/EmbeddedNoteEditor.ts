@@ -196,6 +196,39 @@ export class EmbeddedNoteEditor {
     }
 
     /**
+     * 获取当前编辑器模式
+     * @returns 'source' | 'preview' | null
+     */
+    getMode(): string | null {
+        if (!this.leaf) return null;
+        return (this.leaf.getViewState()?.state?.mode as string) ?? null;
+    }
+
+    /**
+     * 切换到编辑模式
+     */
+    switchToSource(): void {
+        if (!this.leaf) return;
+        const state = this.leaf.getViewState();
+        if (state?.state) {
+            state.state.mode = 'source';
+            this.leaf.setViewState(state);
+        }
+    }
+
+    /**
+     * 切换到预览模式
+     */
+    switchToPreview(): void {
+        if (!this.leaf) return;
+        const state = this.leaf.getViewState();
+        if (state?.state) {
+            state.state.mode = 'preview';
+            this.leaf.setViewState(state);
+        }
+    }
+
+    /**
      * 显示空状态消息
      */
     private showEmpty(message: string): void {

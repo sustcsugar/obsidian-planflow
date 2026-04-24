@@ -2013,6 +2013,45 @@ Author: sugar
 
 /* ==================== Day View Sub-Components ==================== */
 /* BEM命名: gc-day-view Elements */
+
+/* 笔记区标题栏容器 */
+.gc-day-view__notes-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	flex-shrink: 0;
+}
+
+.gc-day-view__notes-header .gc-day-view__title {
+	margin: 0;
+	padding: 0;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+/* 模式切换按钮 */
+.gc-embedded-editor__mode-toggle {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	border: none;
+	background: transparent;
+	cursor: pointer;
+	border-radius: 4px;
+	color: var(--text-muted);
+	transition: color 0.15s, background-color 0.15s;
+	flex-shrink: 0;
+}
+
+.gc-embedded-editor__mode-toggle:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+
 .gc-day-view__task-list {
 	display: flex;
 	flex-direction: column;

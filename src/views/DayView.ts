@@ -1,9 +1,9 @@
-import { App } from 'obsidian';
+import { App, setIcon } from 'obsidian';
 import { BaseViewRenderer } from './BaseViewRenderer';
 import type { GCTask, SortState, StatusFilterState, TagFilterState } from '../types';
 import { sortTasks } from '../tasks/taskSorter';
 import { DEFAULT_SORT_STATE } from '../types';
-import { TaskCardClasses, DayViewClasses, withModifiers } from '../utils/bem';
+import { TaskCardClasses, DayViewClasses, EmbeddedEditorClasses, withModifiers } from '../utils/bem';
 import { TaskCardComponent, DayViewConfig, type TaskCardConfig } from '../components/TaskCard';
 import { Logger } from '../utils/logger';
 import { generateVirtualInstances } from '../tasks/virtualTaskGenerator';
@@ -26,6 +26,10 @@ export class DayViewRenderer extends BaseViewRenderer {
 
 	// 笔记区标题元素引用
 	private notesTitleEl: HTMLElement | null = null;
+
+	// 模式切换按钮引用
+	private modeToggleEl: HTMLElement | null = null;
+	private modeToggleIconEl: HTMLElement | null = null;
 
 	// 当前拖拽高亮的时间格
 	private dragOverSlot: HTMLElement | null = null;
@@ -162,9 +166,7 @@ export class DayViewRenderer extends BaseViewRenderer {
 
 		// 笔记区（右）
 		const notesSection = splitContainer.createDiv(DayViewClasses.elements.sectionNotes);
-		const notesTitle = notesSection.createEl('h3', { text: 'Daily Note' });
-		notesTitle.addClass(DayViewClasses.elements.title);
-		this.notesTitleEl = notesTitle;
+		this.createNotesHeader(notesSection);
 		const notesContent = notesSection.createDiv(DayViewClasses.elements.notesContent);
 
 		// 设置可调整大小的分割线
@@ -191,9 +193,7 @@ export class DayViewRenderer extends BaseViewRenderer {
 
 		// 笔记区（下）
 		const notesSection = splitContainer.createDiv(DayViewClasses.elements.sectionNotes);
-		const notesTitle = notesSection.createEl('h3', { text: 'Daily Note' });
-		notesTitle.addClass(DayViewClasses.elements.title);
-		this.notesTitleEl = notesTitle;
+		this.createNotesHeader(notesSection);
 		const notesContent = notesSection.createDiv(DayViewClasses.elements.notesContent);
 
 		this.setupDayViewDividerVertical(divider, tasksSection, notesSection);
@@ -521,6 +521,8 @@ export class DayViewRenderer extends BaseViewRenderer {
 
 		// 更新笔记区标题为当前打开的文件名
 		this.updateNotesTitle();
+		// 同步模式切换按钮图标
+		this.updateModeToggleIcon();
 	}
 
 	/**
@@ -535,6 +537,66 @@ export class DayViewRenderer extends BaseViewRenderer {
 			this.notesTitleEl.setText(fileName);
 		} else {
 			this.notesTitleEl.setText('Daily Note');
+		}
+	}
+
+	/**
+	 * 创建笔记区标题栏（含模式切换按钮）
+	 */
+	private createNotesHeader(notesSection: HTMLElement): void {
+		const header = notesSection.createDiv(DayViewClasses.elements.notesHeader);
+
+		// 标题文本
+		const title = header.createEl('h3', { text: 'Daily Note' });
+		title.addClass(DayViewClasses.elements.title);
+		this.notesTitleEl = title;
+
+		// 模式切换按钮
+		const toggleBtn = header.createEl('button', {
+			cls: EmbeddedEditorClasses.elements.modeToggle,
+			attr: { 'aria-label': '切换到预览模式' }
+		});
+		this.modeToggleEl = toggleBtn;
+
+		// 使用 span 作为图标容器，与工具栏模式一致
+		const iconSpan = toggleBtn.createSpan();
+		this.modeToggleIconEl = iconSpan;
+		setIcon(iconSpan, 'pencil');
+
+		toggleBtn.addEventListener('click', () => {
+			if (!this.embeddedEditor) return;
+			const currentMode = this.embeddedEditor.getMode();
+			if (currentMode === 'source') {
+				this.embeddedEditor.switchToPreview();
+				// setViewState 是异步的，直接基于目标模式更新 UI
+				this.applyModeToggleState('preview');
+			} else {
+				this.embeddedEditor.switchToSource();
+				this.applyModeToggleState('source');
+			}
+		});
+	}
+
+	/**
+	 * 更新模式切换按钮图标和提示文本
+	 */
+	private updateModeToggleIcon(): void {
+		if (!this.modeToggleEl || !this.embeddedEditor) return;
+		const mode = this.embeddedEditor.getMode();
+		this.applyModeToggleState(mode);
+	}
+
+	/**
+	 * 根据模式设置按钮图标和 tooltip
+	 */
+	private applyModeToggleState(mode: string | null): void {
+		if (!this.modeToggleEl || !this.modeToggleIconEl) return;
+		if (mode === 'source') {
+			setIcon(this.modeToggleIconEl, 'pencil');
+			this.modeToggleEl.setAttribute('aria-label', '切换到预览模式');
+		} else {
+			setIcon(this.modeToggleIconEl, 'book-open');
+			this.modeToggleEl.setAttribute('aria-label', '切换到编辑模式');
 		}
 	}
 }
