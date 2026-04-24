@@ -27,6 +27,9 @@ export class DayViewRenderer extends BaseViewRenderer {
 	// 笔记区标题元素引用
 	private notesTitleEl: HTMLElement | null = null;
 
+	// 当前拖拽高亮的时间格
+	private dragOverSlot: HTMLElement | null = null;
+
 	// 设置前缀
 	private readonly SETTINGS_PREFIX = 'dayView';
 
@@ -94,6 +97,15 @@ export class DayViewRenderer extends BaseViewRenderer {
 	render(container: HTMLElement, currentDate: Date): void {
 		// 保存当前日期用于增量刷新
 		this.currentDate = new Date(currentDate);
+
+		// 设置父容器的 overflow 样式，实现瀑布流布局
+		// .calendar-content 容器
+		container.style.overflow = 'visible';
+		// .view-content 容器（Obsidian ItemView 的内容容器）
+		const viewContent = container.parentElement;
+		if (viewContent) {
+			viewContent.style.overflow = 'auto';
+		}
 
 		const dayContainer = container.createDiv('gc-view gc-view--day');
 
@@ -331,18 +343,29 @@ export class DayViewRenderer extends BaseViewRenderer {
 			if (e.dataTransfer) {
 				e.dataTransfer.dropEffect = 'move';
 			}
-			slot.addClass('gc-day-view__time-slot--drag-over');
+			if (this.dragOverSlot !== slot) {
+				if (this.dragOverSlot) {
+					this.dragOverSlot.removeClass('gc-day-view__time-slot--drag-over');
+				}
+				slot.addClass('gc-day-view__time-slot--drag-over');
+				this.dragOverSlot = slot;
+			}
 		});
 
 		slot.addEventListener('dragleave', (e: DragEvent) => {
-			if (e.target === slot) {
+			const related = e.relatedTarget as HTMLElement | null;
+			if (related && !slot.contains(related)) {
 				slot.removeClass('gc-day-view__time-slot--drag-over');
+				if (this.dragOverSlot === slot) {
+					this.dragOverSlot = null;
+				}
 			}
 		});
 
 		slot.addEventListener('drop', async (e: DragEvent) => {
 			e.preventDefault();
 			slot.removeClass('gc-day-view__time-slot--drag-over');
+			this.dragOverSlot = null;
 
 			const taskId = e.dataTransfer?.getData('taskId');
 			if (!taskId) return;
