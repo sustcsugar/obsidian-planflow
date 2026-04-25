@@ -102,15 +102,6 @@ export class DayViewRenderer extends BaseViewRenderer {
 		// 保存当前日期用于增量刷新
 		this.currentDate = new Date(currentDate);
 
-		// 设置父容器的 overflow 样式，实现瀑布流布局
-		// .calendar-content 容器
-		container.style.overflow = 'visible';
-		// .view-content 容器（Obsidian ItemView 的内容容器）
-		const viewContent = container.parentElement;
-		if (viewContent) {
-			viewContent.style.overflow = 'auto';
-		}
-
 		const dayContainer = container.createDiv('gc-view gc-view--day');
 
 		// 检查是否显示 Daily Note

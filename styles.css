@@ -72,7 +72,7 @@ Author: sugar
 	gap: 0;
 	margin-top: 0;
 	flex: 1;
-	overflow: hidden;
+	overflow: visible;
 	min-height: 0;
 	position: relative;
 }
@@ -91,7 +91,7 @@ Author: sugar
 	display: grid;
 	grid-template-columns: repeat(7, 1fr);
 	gap: 0;
-	overflow-y: auto;
+	overflow-y: visible;
 	overflow-x: hidden;
 	flex: 1 1 auto;
 	min-height: 0;
@@ -194,8 +194,8 @@ Author: sugar
 	flex-direction: column;
 	gap: 0;
 	flex: 1;
-	overflow: hidden;
-	height: 100%;
+	overflow: visible;
+	height: auto;
 }
 
 .gc-week-view__days {
@@ -1778,7 +1778,7 @@ Author: sugar
 .gc-week-view__tasks-column {
 	border-right: 1px solid var(--background-modifier-border);
 	padding: 8px;
-	overflow-y: auto;
+	overflow-y: visible;
 	overflow-x: hidden;
 	display: flex;
 	flex-direction: column;
@@ -1941,7 +1941,7 @@ Author: sugar
 	display: grid;
 	grid-template-columns: 48px repeat(7, 1fr);
 	grid-template-rows: 52px repeat(24, max-content);
-	overflow-y: auto;
+	overflow-y: visible;
 	overflow-x: hidden;
 	flex: 1 1 auto;
 	min-height: 0;
