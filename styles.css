@@ -2002,6 +2002,7 @@ Author: sugar
 	border-top: 1px solid var(--background-modifier-border);
 	border-right: 1px solid var(--background-modifier-border);
 	overflow: visible;
+	position: relative;
 }
 
 .gc-week-view__time-tasks {
@@ -2105,6 +2106,7 @@ Author: sugar
 	display: flex;
 	min-height: 48px;
 	border-top: 1px solid var(--background-modifier-border);
+	position: relative;
 }
 
 .gc-day-view__time-slot:first-child {
@@ -3885,5 +3887,38 @@ Author: sugar
 
 .gc-sidebar__timeline-slot-create:hover .lucide-plus {
 	opacity: 1;
+	color: var(--interactive-accent);
+}
+
+/* 日视图/周视图 空时间格 "+" 创建按钮 */
+.gc-day-view__slot-create,
+.gc-week-view__slot-create {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	border-radius: 4px;
+	transition: background-color 0.15s;
+}
+
+.gc-day-view__slot-create:hover,
+.gc-week-view__slot-create:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.gc-day-view__slot-create .lucide-plus,
+.gc-week-view__slot-create .lucide-plus {
+	width: 18px;
+	height: 18px;
+	color: var(--text-muted);
+	opacity: 0;
+	transition: opacity 0.15s, color 0.15s;
+}
+
+.gc-day-view__slot-create:hover .lucide-plus,
+.gc-week-view__slot-create:hover .lucide-plus {
+	opacity: 0.7;
 	color: var(--interactive-accent);
 }

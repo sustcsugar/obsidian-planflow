@@ -1,7 +1,8 @@
-import { Notice, App } from 'obsidian';
+import { Notice, App, setIcon } from 'obsidian';
 import { BaseViewRenderer } from './BaseViewRenderer';
 import { getWeekOfDate } from '../dateUtils/dateUtilsIndex';
 import { updateTaskDateField } from '../tasks/taskUpdater';
+import { CreateTaskModal } from '../modals/CreateTaskModal';
 import type { GCTask, SortState, StatusFilterState, TagFilterState, CalendarDay } from '../types';
 import { sortTasks } from '../tasks/taskSorter';
 import { TaskCardComponent, WeekViewConfig, type TaskCardConfig } from '../components/TaskCard';
@@ -229,6 +230,17 @@ export class WeekViewRenderer extends BaseViewRenderer {
 				slotContainers[dayIdx], day.date, allRealTasks, allVirtualInstances, dateField
 			);
 		});
+
+		// 空时间格添加 "+" 快速创建
+		weekData.days.forEach((day, dayIdx) => {
+			for (let h = 0; h <= 23; h++) {
+				const tasksEl = slotContainers[dayIdx][h];
+				if (tasksEl.children.length === 0) {
+					const slot = tasksEl.parentElement as HTMLElement;
+					this.setupQuickCreateForSlot(slot, h, day.date);
+				}
+			}
+		});
 	}
 
 	/**
@@ -331,6 +343,36 @@ export class WeekViewRenderer extends BaseViewRenderer {
 				this.renderTimelineTaskItem(task, container, targetDate);
 			});
 		}
+	}
+
+	/**
+	 * 空时间格：hover 显示 "+"，点击创建任务
+	 */
+	private setupQuickCreateForSlot(slot: HTMLElement, hour: number, targetDate: Date): void {
+		const createEl = slot.createDiv("gc-week-view__slot-create");
+		createEl.addEventListener("mouseenter", () => {
+			createEl.empty();
+			setIcon(createEl, "plus");
+		});
+		createEl.addEventListener("mouseleave", () => {
+			createEl.empty();
+		});
+		createEl.addEventListener("click", (e) => {
+			e.stopPropagation();
+			const modal = new CreateTaskModal({
+				app: this.app,
+				plugin: this.plugin,
+				targetDate,
+				targetHour: hour,
+				onSuccess: () => {
+					this.plugin.taskCache.initialize(
+						this.plugin.settings.globalTaskFilter,
+						this.plugin.settings.enabledTaskFormats
+					);
+				},
+			});
+			modal.open();
+		});
 	}
 
 	/**

@@ -9,6 +9,7 @@ import { Logger } from '../utils/logger';
 import { generateVirtualInstances } from '../tasks/virtualTaskGenerator';
 import { EmbeddedNoteEditor } from './EmbeddedNoteEditor';
 import { updateTaskDateField } from '../tasks/taskUpdater';
+import { CreateTaskModal } from '../modals/CreateTaskModal';
 import { Notice } from 'obsidian';
 
 /**
@@ -294,6 +295,10 @@ export class DayViewRenderer extends BaseViewRenderer {
 
 			// 设置时间格的拖放功能
 			this.setupDragDropForTimeSlot(slot, h, targetDate, container);
+			// 空时间格：hover 显示 "+"，点击创建任务
+			if (hourTasks.length === 0) {
+				this.setupQuickCreateForSlot(slot, h, targetDate);
+			}
 		}
 	}
 
@@ -396,6 +401,36 @@ export class DayViewRenderer extends BaseViewRenderer {
 				Logger.error('DayView', 'Error updating task time:', error);
 				new Notice('更新任务时间失败');
 			}
+		});
+	}
+
+	/**
+	 * 空时间格：hover 显示 "+"，点击创建任务
+	 */
+	private setupQuickCreateForSlot(slot: HTMLElement, hour: number, targetDate: Date): void {
+		const createEl = slot.createDiv('gc-day-view__slot-create');
+		createEl.addEventListener('mouseenter', () => {
+			createEl.empty();
+			setIcon(createEl, 'plus');
+		});
+		createEl.addEventListener('mouseleave', () => {
+			createEl.empty();
+		});
+		createEl.addEventListener('click', (e) => {
+			e.stopPropagation();
+			const modal = new CreateTaskModal({
+				app: this.app,
+				plugin: this.plugin,
+				targetDate,
+				targetHour: hour,
+				onSuccess: () => {
+					this.plugin.taskCache.initialize(
+						this.plugin.settings.globalTaskFilter,
+						this.plugin.settings.enabledTaskFormats
+					);
+				},
+			});
+			modal.open();
 		});
 	}
 
