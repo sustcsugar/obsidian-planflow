@@ -111,6 +111,7 @@ export interface GanttCalendarSettings {
 		syncDirection: 'bidirectional' | 'import-only' | 'export-only';
 		syncInterval: number;
 		conflictResolution: 'local-win' | 'remote-win' | 'newest-win' | 'manual';
+		feishuSyncTargetFile: string;  // 飞书新任务同步到的目标文件（默认 Tasks.md）
 		api?: {
 			provider: 'feishu' | 'microsoft-todo' | 'custom';
 			apiKey?: string;

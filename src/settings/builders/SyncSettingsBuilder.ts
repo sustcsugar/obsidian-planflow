@@ -5,7 +5,11 @@ import { FeishuOAuth } from '../../data-layer/sources/api/providers/feishu/Feish
 import { FeishuHttpClient } from '../../data-layer/sources/api/providers/feishu/FeishuHttpClient';
 import { FeishuUserApi } from '../../data-layer/sources/api/providers/feishu/FeishuUserApi';
 import { FeishuCalendarApi } from '../../data-layer/sources/api/providers/feishu/FeishuCalendarApi';
-import type { FeishuCalendar } from '../../data-layer/sources/api/providers/feishu/FeishuTypes';
+import { FeishuTaskApi } from '../../data-layer/sources/api/providers/feishu/FeishuTaskApi';
+import type { FeishuCalendar, FeishuTaskList } from '../../data-layer/sources/api/providers/feishu/FeishuTypes';
+import { FeishuProvider } from '../../data-layer/sources/api/providers/FeishuProvider';
+import { FeishuTaskSync } from '../../data-layer/feishu-sync/FeishuTaskSync';
+import { SyncStateManager } from '../../data-layer/feishu-sync/syncState';
 import { Logger } from '../../utils/logger';
 
 /**
@@ -93,6 +97,19 @@ export class SyncSettingsBuilder extends BaseBuilder {
 							await this.runManualSync();
 						}))
 			);
+
+				// ===== 飞书同步目标文件 =====
+				addSetting(setting =>
+					setting.setName("飞书同步目标文件")
+						.setDesc("飞书新任务将同步到此文件（不存在时自动创建，默认 gantt-calendar-feishu-sync.md）")
+						.addText(text => text
+							.setPlaceholder("gantt-calendar-feishu-sync.md")
+							.setValue(syncConfig.feishuSyncTargetFile || "gantt-calendar-feishu-sync.md")
+							.onChange(async (value: string) => {
+								this.updateSyncConfig({ feishuSyncTargetFile: value || "gantt-calendar-feishu-sync.md" });
+								await this.saveAndRefresh();
+							}))
+				);
 		});
 
 		// ===== API 同步设置 =====
@@ -171,6 +188,19 @@ export class SyncSettingsBuilder extends BaseBuilder {
 							}))
 				);
 			}
+
+				// 获取任务清单按钮（仅飞书）
+				if (provider === "feishu") {
+					addSetting(setting =>
+						setting.setName("获取任务清单")
+							.setDesc("获取飞书账号中可操作的任务清单")
+							.addButton(button => button
+								.setButtonText("获取任务清单")
+								.onClick(async () => {
+									await this.fetchFeishuTaskLists();
+								}))
+					);
+				}
 
 			// 日历列表展示区域（仅飞书，直接添加到容器中）
 			if (provider === 'feishu') {
@@ -274,6 +304,87 @@ export class SyncSettingsBuilder extends BaseBuilder {
 				}
 			}
 		});
+
+				// 任务清单展示区域（仅飞书）
+				{
+					const taskLists = syncConfig.api?.taskLists as FeishuTaskList[] || [];
+
+					if (taskLists.length > 0) {
+						const taskListEl = document.createElement("div");
+						taskListEl.className = "feishu-task-list";
+						taskListEl.style.marginTop = "18px";
+						taskListEl.style.marginBottom = "18px";
+						taskListEl.style.padding = "0";
+
+						const headerEl = document.createElement("div");
+						headerEl.style.fontWeight = "bold";
+						headerEl.style.marginBottom = "12px";
+						headerEl.style.fontSize = "14px";
+						headerEl.textContent = "飞书任务清单列表 (" + taskLists.length + " 个)";
+						taskListEl.appendChild(headerEl);
+
+						const listEl = document.createElement("div");
+						listEl.style.display = "flex";
+						listEl.style.flexWrap = "wrap";
+						listEl.style.gap = "12px";
+						listEl.style.maxHeight = "300px";
+						listEl.style.overflowY = "auto";
+
+						taskLists.forEach((tl) => {
+							const itemEl = document.createElement("div");
+							itemEl.style.padding = "12px";
+							itemEl.style.border = "1px solid var(--background-modifier-border)";
+							itemEl.style.borderRadius = "6px";
+							itemEl.style.backgroundColor = "var(--background-secondary)";
+							itemEl.style.minWidth = "220px";
+							itemEl.style.flex = "0 0 auto";
+
+							const titleDiv = itemEl.createDiv();
+							titleDiv.style.fontWeight = "500";
+							titleDiv.setText(tl.name);
+
+							const idDiv = itemEl.createDiv();
+							idDiv.style.fontSize = "11px";
+							idDiv.style.fontFamily = "monospace";
+							idDiv.style.color = "var(--text-muted)";
+							idDiv.style.marginTop = "4px";
+							idDiv.style.wordBreak = "break-all";
+							idDiv.setText(tl.guid);
+
+							if (tl.creator) {
+								const creatorDiv = itemEl.createDiv();
+								creatorDiv.style.fontSize = "12px";
+								creatorDiv.style.color = "var(--text-muted)";
+								creatorDiv.style.marginTop = "4px";
+								creatorDiv.setText("创建者: " + tl.creator.id);
+							}
+
+							if (tl.members && tl.members.length > 0) {
+								const memberDiv = itemEl.createDiv();
+								memberDiv.style.fontSize = "12px";
+								memberDiv.style.color = "var(--text-muted)";
+								memberDiv.style.marginTop = "4px";
+								memberDiv.setText("成员: " + tl.members.length + " 人");
+							}
+
+							const selectBtn = document.createElement("button");
+							selectBtn.textContent = "选择";
+							selectBtn.style.marginTop = "10px";
+							selectBtn.style.padding = "6px 16px";
+							selectBtn.style.fontSize = "12px";
+							selectBtn.className = "mod-cta";
+							selectBtn.onclick = () => {
+								new Notice("已选择任务清单：" + tl.name);
+							};
+							itemEl.appendChild(selectBtn);
+
+							listEl.appendChild(itemEl);
+						});
+
+						taskListEl.appendChild(listEl);
+						this.containerEl.appendChild(taskListEl);
+					}
+				}
 
 		// ===== CalDAV 日历同步设置 =====
 		this.createSettingGroup('日历同步(此功能尚未开发,请不要使用,防止数据丢失)', (group) => {
@@ -979,14 +1090,25 @@ export class SyncSettingsBuilder extends BaseBuilder {
 			const tokenExpireAt = Date.now() + expiresIn * 1000;
 
 			// 更新配置（v2 API 不在响应中返回 user_id 和 name，需要单独获取）
-			this.updateSyncConfig({
-				api: {
-					...apiConfig,
-					accessToken: tokenResponse.access_token,
-					refreshToken: tokenResponse.refresh_token,
-					tokenExpireAt: tokenExpireAt,
+			const updateData: any = {
+				...apiConfig,
+				accessToken: tokenResponse.access_token,
+				refreshToken: tokenResponse.refresh_token,
+				tokenExpireAt: tokenExpireAt,
+			};
+
+			// 自动获取用户信息
+			try {
+				const userInfo = await FeishuUserApi.getUserInfo(tokenResponse.access_token, requestFetch);
+				if (userInfo) {
+					updateData.userId = userInfo.userId;
+					updateData.userName = userInfo.name;
 				}
-			});
+			} catch (e) {
+				Logger.warn('SyncSettingsBuilder', '获取用户信息失败（非致命）', e);
+			}
+
+			this.updateSyncConfig({ api: updateData });
 
 			await this.saveAndRefresh();
 			new Notice('飞书授权成功！');
@@ -1140,6 +1262,7 @@ export class SyncSettingsBuilder extends BaseBuilder {
 				syncDirection: 'bidirectional',
 				syncInterval: 30,
 				conflictResolution: 'local-win',
+				feishuSyncTargetFile: 'gantt-calendar-feishu-sync.md',
 			};
 		}
 		return this.plugin.settings.syncConfiguration;
@@ -1186,27 +1309,67 @@ export class SyncSettingsBuilder extends BaseBuilder {
 	 * 手动同步
 	 */
 	private async runManualSync(): Promise<void> {
-		new Notice('开始同步...');
-
 		try {
-			// 调用插件的同步方法
-			if ((this.plugin as any).syncManager) {
-				const result = await (this.plugin as any).syncManager.sync();
+			const syncConfig = this.getSyncConfiguration();
+			const apiConfig = syncConfig.api;
 
-				if (result.success) {
-					new Notice(`同步完成！新建: ${result.stats.created}, 更新: ${result.stats.updated}`);
+			if (!apiConfig?.accessToken) {
+				new Notice('请先在设置中完成飞书授权');
+				return;
+			}
 
-					if (result.conflicts && result.conflicts.length > 0) {
-						new Notice(`检测到 ${result.conflicts.length} 个冲突需要手动处理`);
-					}
-				} else {
-					new Notice('同步失败，请查看控制台日志');
-				}
+			const clientId = apiConfig.clientId || apiConfig.appId;
+			const clientSecret = apiConfig.clientSecret || apiConfig.appSecret;
+
+			if (!clientId || !clientSecret) {
+				new Notice('请先配置飞书 App ID 和 App Secret');
+				return;
+			}
+
+			new Notice('正在同步飞书任务...');
+
+			const provider = new FeishuProvider({
+				enabled: true,
+				syncDirection: syncConfig.syncDirection,
+				autoSync: false,
+				syncInterval: 0,
+				conflictResolution: syncConfig.conflictResolution,
+				api: {
+					provider: 'feishu',
+					accessToken: apiConfig.accessToken,
+					refreshToken: apiConfig.refreshToken,
+					tokenExpireAt: apiConfig.tokenExpireAt,
+					clientId,
+					clientSecret,
+					redirectUri: apiConfig.redirectUri,
+				},
+			});
+
+			const stateManager = new SyncStateManager(this.plugin.app);
+			const syncEngine = new FeishuTaskSync(this.plugin.app, provider, stateManager, {
+				conflictStrategy: syncConfig.conflictResolution as 'newest-win' | 'local-win' | 'remote-win' || 'newest-win',
+				targetFile: syncConfig.feishuSyncTargetFile || 'gantt-calendar-feishu-sync.md',
+				enabledFormats: (this.plugin.settings.enabledTaskFormats as ('tasks' | 'dataview')[]) || ['tasks', 'dataview'],
+				globalFilter: this.plugin.settings.globalTaskFilter,
+			});
+
+			const result = await syncEngine.sync();
+
+			const parts: string[] = [];
+			if (result.pushed > 0) parts.push('推送 ' + result.pushed + ' 个');
+			if (result.pulled > 0) parts.push('拉取 ' + result.pulled + ' 个');
+			if (result.conflicted > 0) parts.push('冲突 ' + result.conflicted + ' 个');
+			if (result.skipped > 0) parts.push('跳过 ' + result.skipped + ' 个');
+			const summary = parts.length > 0 ? parts.join('，') : '无变更';
+
+			if (result.errors.length > 0) {
+				new Notice('同步完成: ' + summary + '，' + result.errors.length + ' 个错误', 8000);
 			} else {
-				new Notice('同步功能未初始化');
+				new Notice('同步完成: ' + summary);
 			}
 		} catch (error) {
-			new Notice(`同步出错: ${error instanceof Error ? error.message : String(error)}`);
+			const errorMsg = error instanceof Error ? error.message : String(error);
+			new Notice('同步出错: ' + errorMsg);
 		}
 	}
 
@@ -1350,6 +1513,62 @@ export class SyncSettingsBuilder extends BaseBuilder {
 			}
 
 			Logger.error('SyncSettingsBuilder', 'Failed to fetch Feishu calendar list', error);
+		}
+	}
+
+	/**
+	 * 获取飞书任务清单列表
+	 */
+	private async fetchFeishuTaskLists(): Promise<void> {
+		new Notice('正在获取飞书任务清单...');
+
+		try {
+			const config = this.getSyncConfiguration();
+			const accessToken = config.api?.accessToken;
+
+			// 检查是否已授权
+			if (!accessToken) {
+				new Notice('请先完成飞书授权');
+				return;
+			}
+
+			const requestFetch = FeishuHttpClient.createRequestFetch(requestUrl);
+			const taskLists = await FeishuTaskApi.getAllTaskLists(accessToken, requestFetch);
+
+			// 保存到配置
+			this.updateSyncConfig({
+				api: {
+					...config.api,
+					taskLists: taskLists,
+					taskListsFetchedAt: Date.now(),
+				}
+			});
+			await this.saveAndRefresh();
+			this.refreshSettingsPanel();
+
+			new Notice('✅ 成功获取 ' + taskLists.length + ' 个任务清单');
+
+			Logger.debug('SyncSettingsBuilder', 'Feishu task lists',
+				taskLists.map((tl, index) => ({
+					index: index + 1,
+					name: tl.name,
+					guid: tl.guid,
+					creator: tl.creator?.id,
+					memberCount: tl.members?.length || 0,
+				}))
+			);
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : String(error);
+
+			if (errorMsg.includes('401') || errorMsg.includes('403')) {
+				new Notice('❌ 认证失败：Access Token 无效或已过期，请重新授权');
+			} else if (errorMsg.includes('network') || errorMsg.includes('fetch')) {
+				new Notice('❌ 网络错误：请检查网络连接');
+			} else {
+				new Notice('❌ 获取任务清单失败: ' + errorMsg);
+			}
+
+			Logger.error('SyncSettingsBuilder', 'Failed to fetch Feishu task lists', error);
 		}
 	}
 

@@ -9,6 +9,9 @@ import type GanttCalendarPlugin from '../../main';
 import { FeishuHttpClient } from '../data-layer/sources/api/providers/feishu/FeishuHttpClient';
 import { FeishuTaskApi } from '../data-layer/sources/api/providers/feishu/FeishuTaskApi';
 import { FeishuTaskStorage } from '../data-layer/sources/api/providers/FeishuTaskStorage';
+import { FeishuProvider } from '../data-layer/sources/api/providers/FeishuProvider';
+import { FeishuTaskSync } from '../data-layer/feishu-sync/FeishuTaskSync';
+import { SyncStateManager } from '../data-layer/feishu-sync/syncState';
 import { Logger } from '../utils/logger';
 
 /**
@@ -22,6 +25,15 @@ export function registerFeishuCommands(plugin: GanttCalendarPlugin): void {
         name: '从飞书获取任务',
         callback: async () => {
             await fetchFeishuTasks(plugin);
+        }
+    });
+
+    // 飞书双向同步命令
+    plugin.addCommand({
+        id: 'feishu-sync-tasks',
+        name: '飞书任务双向同步',
+        callback: async () => {
+            await syncFeishuTasks(plugin);
         }
     });
 }
@@ -85,5 +97,85 @@ async function fetchFeishuTasks(plugin: GanttCalendarPlugin): Promise<void> {
         const errorMsg = error instanceof Error ? error.message : String(error);
         Logger.error('FeishuCommands', 'Failed to fetch tasks', error);
         new Notice(`获取任务失败: ${errorMsg}`);
+    }
+}
+
+/**
+ * 执行飞书任务双向同步
+ * @param plugin 插件实例
+ */
+async function syncFeishuTasks(plugin: GanttCalendarPlugin): Promise<void> {
+    try {
+        const syncConfig = plugin.settings.syncConfiguration;
+        const apiConfig = syncConfig?.api;
+
+        if (!apiConfig?.accessToken) {
+            new Notice('请先在设置中完成飞书授权');
+            return;
+        }
+
+        const clientId = apiConfig.clientId || apiConfig.appId;
+        const clientSecret = apiConfig.clientSecret || apiConfig.appSecret;
+
+        if (!clientId || !clientSecret) {
+            new Notice('请先在设置中配置飞书 App ID 和 App Secret');
+            return;
+        }
+
+        new Notice('正在同步飞书任务...');
+
+        // 创建 FeishuProvider
+        const provider = new FeishuProvider({
+            enabled: true,
+            syncDirection: syncConfig?.syncDirection || 'bidirectional',
+            autoSync: false,
+            syncInterval: 0,
+            conflictResolution: syncConfig?.conflictResolution || 'newest-win',
+            api: {
+                provider: 'feishu',
+                accessToken: apiConfig.accessToken,
+                refreshToken: apiConfig.refreshToken,
+                tokenExpireAt: apiConfig.tokenExpireAt,
+                clientId,
+                clientSecret,
+                redirectUri: apiConfig.redirectUri,
+            },
+        });
+
+        // 创建同步状态管理器
+        const stateManager = new SyncStateManager(plugin.app);
+
+        // 创建同步引擎
+        const syncEngine = new FeishuTaskSync(plugin.app, provider, stateManager, {
+            conflictStrategy: (syncConfig?.conflictResolution as 'newest-win' | 'local-win' | 'remote-win') || 'newest-win',
+            targetFile: syncConfig?.feishuSyncTargetFile || 'gantt-calendar-feishu-sync.md',
+            enabledFormats: (plugin.settings.enabledTaskFormats as ('tasks' | 'dataview')[]) || ['tasks', 'dataview'],
+            globalFilter: plugin.settings.globalTaskFilter,
+        });
+
+        // 执行同步
+        const result = await syncEngine.sync();
+
+        // 显示结果
+        const parts: string[] = [];
+        if (result.pushed > 0) parts.push(`推送 ${result.pushed} 个`);
+        if (result.pulled > 0) parts.push(`拉取 ${result.pulled} 个`);
+        if (result.conflicted > 0) parts.push(`冲突 ${result.conflicted} 个`);
+        if (result.skipped > 0) parts.push(`跳过 ${result.skipped} 个`);
+
+        const summary = parts.length > 0 ? parts.join('，') : '无变更';
+
+        if (result.errors.length > 0) {
+            new Notice(`同步完成: ${summary}，${result.errors.length} 个错误`, 8000);
+            Logger.warn('FeishuCommands', 'Sync errors', result.errors);
+        } else {
+            new Notice(`同步完成: ${summary}`);
+        }
+
+        Logger.info('FeishuCommands', `Sync result: ${summary}`);
+    } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        Logger.error('FeishuCommands', 'Sync failed', error);
+        new Notice(`同步失败: ${errorMsg}`);
     }
 }

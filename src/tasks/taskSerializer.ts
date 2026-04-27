@@ -21,6 +21,8 @@ export interface TaskUpdates {
 	content?: string;
 	tags?: string[];
 	ticktick?: string | null;
+	feishuGuid?: string | null;  // 飞书任务 GUID，null 表示清除
+	feishuDesc?: string | null;  // 飞书任务描述，null 表示清除
 }
 
 /**
@@ -34,6 +36,8 @@ interface MergedTask {
 	description: string;
 	tags?: string[];  // 任务标签
 		ticktick?: string;  // ticktick 文本
+	feishuGuid?: string;  // 飞书任务 GUID
+	feishuDesc?: string;  // 飞书任务描述
 	createdDate?: Date;
 	startDate?: Date;
 	scheduledDate?: Date;
@@ -147,6 +151,8 @@ export function serializeTask(
 		// 保留标签，优先使用更新的标签
 		tags: updates.tags !== undefined ? updates.tags : task.tags,
 		ticktick: updates.ticktick !== undefined ? (updates.ticktick || undefined) : task.ticktick,
+		feishuGuid: updates.feishuGuid !== undefined ? (updates.feishuGuid || undefined) : task.feishuGuid,
+		feishuDesc: updates.feishuDesc !== undefined ? (updates.feishuDesc || undefined) : task.feishuDesc,
 		// 处理日期字段：undefined 使用原始值，null 转为 undefined（表示清除）
 		createdDate: updates.createdDate !== undefined ? (updates.createdDate || undefined) : task.createdDate,
 		startDate: updates.startDate !== undefined ? (updates.startDate || undefined) : task.startDate,
@@ -197,6 +203,14 @@ export function serializeTask(
 	// 任务描述
 	if (merged.description) {
 		parts.push(merged.description);
+	}
+
+	// 飞书同步字段（放在描述后、元数据前，使用 %% 注释语法隐藏）
+	if (merged.feishuGuid) {
+		parts.push(`%%[guid:: ${merged.feishuGuid}]%%`);
+	}
+	if (merged.feishuDesc) {
+		parts.push(`%%[desc:: ${merged.feishuDesc}]%%`);
 	}
 
 	// ticktick

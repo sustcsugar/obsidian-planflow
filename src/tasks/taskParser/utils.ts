@@ -189,6 +189,56 @@ export function extractTicktick(content: string): {
     return { ticktick, contentWithoutTicktick };
 }
 
+// ==================== 飞书同步字段提取 ====================
+
+/** 匹配 %%[guid:: xxx]%% 格式 */
+const FEISHU_GUID_REGEX = /%%\[guid::\s*([^\]]+)\]%%/;
+
+/** 匹配 %%[desc:: xxx]%% 格式 */
+const FEISHU_DESC_REGEX = /%%\[desc::\s*([^\]]+)\]%%/;
+
+/** 移除 %%[guid:: xxx]%% 和 %%[desc:: xxx]%% 及周围空格 */
+const REMOVE_FEISHU_FIELDS = /\s*%%\[(?:guid|desc)::\s*[^\]]+\]%%\s*/g;
+
+/**
+ * 提取飞书任务 GUID
+ *
+ * 从任务内容中提取 %%[guid:: xxx]%% 格式的飞书任务 GUID。
+ *
+ * @param content - 原始任务内容
+ * @returns 飞书 GUID，不存在则返回 undefined
+ */
+export function extractFeishuGuid(content: string): string | undefined {
+    const match = content.match(FEISHU_GUID_REGEX);
+    return match ? match[1].trim() : undefined;
+}
+
+/**
+ * 提取飞书任务描述
+ *
+ * 从任务内容中提取 %%[desc:: xxx]%% 格式的飞书任务描述。
+ *
+ * @param content - 原始任务内容
+ * @returns 飞书描述，不存在则返回 undefined
+ */
+export function extractFeishuDesc(content: string): string | undefined {
+    const match = content.match(FEISHU_DESC_REGEX);
+    return match ? match[1].trim() : undefined;
+}
+
+/**
+ * 移除飞书同步字段标记
+ *
+ * 从任务内容中移除 %%[guid:: xxx]%% 和 %%[desc:: xxx]%% 标记。
+ * 用于在提取后清理内容，防止被 ticktick 解析器误捕获。
+ *
+ * @param content - 原始任务内容
+ * @returns 移除飞书字段标记后的内容
+ */
+export function removeFeishuFields(content: string): string {
+    return content.replace(REMOVE_FEISHU_FIELDS, ' ').replace(/\s{2,}/g, ' ').trim();
+}
+
 // ==================== 字符串处理 ====================
 
 /**

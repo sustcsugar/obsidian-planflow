@@ -17,7 +17,7 @@ import { parseTaskLine } from './step1';
 import { passesGlobalFilter, removeGlobalFilter } from './step2';
 import { detectFormat } from './step3';
 import { parseCheckboxStatus, parseTaskAttributes } from './step4';
-import { extractTaskDescription, extractTags, extractTicktick } from './utils';
+import { extractTaskDescription, extractTags, extractTicktick, extractFeishuGuid, extractFeishuDesc, removeFeishuFields } from './utils';
 
 // ==================== 主解析函数 ====================
 
@@ -78,13 +78,21 @@ export function parseTasksFromListItems(
         // 解析复选框状态（包括 status）
         const { completed, cancelled, status } = parseCheckboxStatus(checkboxStatus);
 
+        // ==================== 提取飞书同步字段 ====================
+        const feishuGuid = extractFeishuGuid(contentWithoutFilter);
+        const feishuDesc = extractFeishuDesc(contentWithoutFilter);
+        // 从内容中移除飞书字段标记，防止被 ticktick 解析器误捕获
+        const contentWithoutFeishu = feishuGuid || feishuDesc
+            ? removeFeishuFields(contentWithoutFilter)
+            : contentWithoutFilter;
+
         // ==================== 第三步：判断格式 ====================
-        const detectedFormat = detectFormat(contentWithoutFilter, enabledFormats);
+        const detectedFormat = detectFormat(contentWithoutFeishu, enabledFormats);
         // 混合格式默认使用 tasks 格式进行解析
         const format = detectedFormat === 'mixed' ? 'tasks' : detectedFormat;
 
         // 提取 %%content%% ticktick（在描述提取之前）
-        const { ticktick, contentWithoutTicktick } = extractTicktick(contentWithoutFilter);
+        const { ticktick, contentWithoutTicktick } = extractTicktick(contentWithoutFeishu);
 
         // ==================== 第四步：解析属性 ====================
         const task: GCTask = {
@@ -98,10 +106,12 @@ export function parseTasksFromListItems(
             status,
             priority: 'normal', // 默认优先级
             ticktick,
+            feishuGuid,
+            feishuDesc,
         };
 
         // 解析标签
-        const tags = extractTags(contentWithoutFilter);
+        const tags = extractTags(contentWithoutFeishu);
         if (tags.length > 0) {
             task.tags = tags;
         }
@@ -109,7 +119,7 @@ export function parseTasksFromListItems(
         // 如果检测到有效格式，解析任务属性
         if (format && enabledFormats.includes(format)) {
             const { priority, dates, datePrecisions, hasCancelledDate, repeat } = parseTaskAttributes(
-                contentWithoutFilter,
+                contentWithoutFeishu,
                 format
             );
 

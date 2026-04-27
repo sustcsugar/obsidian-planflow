@@ -16,8 +16,8 @@ export const API_ENDPOINTS = {
     AUTH: 'https://accounts.feishu.cn/open-apis/authen/v1/authorize',
     /** 获取令牌端点（v2端点，使用 form-urlencoded 格式） */
     TOKEN: 'https://open.feishu.cn/open-apis/authen/v2/oauth/token',
-    /** 刷新令牌端点（v2端点，使用 form-urlencoded 格式） */
-    REFRESH: 'https://open.feishu.cn/open-apis/authen/v2/oauth/refresh',
+    /** 刷新令牌端点（v2端点，使用 grant_type=refresh_token） */
+    REFRESH: 'https://open.feishu.cn/open-apis/authen/v2/oauth/token',
     /** 获取用户信息端点 */
     USER_INFO: 'https://open.feishu.cn/open-apis/authen/v1/user_info',
     /** 获取日历列表端点 */
@@ -35,6 +35,7 @@ export const DEFAULT_REDIRECT_URI = 'https://open.feishu.cn/api-explorer/loading
 
 /** 默认Scope组合（包含日历和任务权限） */
 export const DEFAULT_SCOPES = [
+    FEISHU_SCOPES.OFFLINE_ACCESS,
     FEISHU_SCOPES.CALENDAR_READONLY,
     FEISHU_SCOPES.TASK_READ,
     FEISHU_SCOPES.TASK_WRITE,

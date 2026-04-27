@@ -120,6 +120,9 @@ export interface GCTask {
 	// 同步相关字段
 	sourceId?: string;             // 数据源特定 ID
 	lastModified?: Date;           // 最后修改时间
+	// 飞书同步字段
+	feishuGuid?: string;           // 飞书任务 GUID（存储在 %%[guid:: xxx]%% 中）
+	feishuDesc?: string;           // 飞书任务描述（存储在 %%[desc:: xxx]%% 中）
 }
 
 /**

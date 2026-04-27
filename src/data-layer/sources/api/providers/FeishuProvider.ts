@@ -10,7 +10,8 @@ import { APIDataSource, APIResponse, APITaskDTO } from '../APIDataSource';
 import type { DataSourceConfig } from '../../../types';
 import { Logger } from '../../../../utils/logger';
 import { FeishuOAuth } from './feishu/FeishuOAuth';
-import type { FeishuOAuthConfig } from './feishu/FeishuTypes';
+import type { FeishuOAuthConfig, FeishuTaskRaw, FeishuTaskResponse } from './feishu/FeishuTypes';
+import type { FeishuTaskPayload } from '../../../feishu-sync/taskMapper';
 
 /**
  * 飞书任务 DTO
@@ -263,6 +264,73 @@ export class FeishuProvider extends APIDataSource {
         }
     }
 
+    // ==================== 飞书同步引擎公开 API ====================
+
+    /**
+     * 获取所有飞书任务（原始格式，支持分页）
+     *
+     * 返回原始 FeishuTaskRaw 对象，保留 update_time 等字段用于同步变更检测。
+     */
+    async fetchAllFeishuTasks(pageSize: number = 100): Promise<FeishuTaskRaw[]> {
+        await this.ensureAccessToken();
+
+        const allTasks: FeishuTaskRaw[] = [];
+        let pageToken: string | undefined;
+
+        do {
+            const params = new URLSearchParams({ page_size: String(pageSize) });
+            if (pageToken) params.append('page_token', pageToken);
+
+            const response = await this.callAPI<FeishuTaskResponse>(
+                `/open-apis/task/v1/tasks?${params.toString()}`
+            );
+
+            if (response.code === 0 && response.data?.items) {
+                allTasks.push(...response.data.items);
+            }
+
+            pageToken = response.data?.has_more ? response.data?.page_token : undefined;
+        } while (pageToken);
+
+        return allTasks;
+    }
+
+    /**
+     * 创建飞书任务（同步引擎用）
+     */
+    async createFeishuTask(payload: FeishuTaskPayload): Promise<string> {
+        await this.ensureAccessToken();
+
+        const response = await this.callAPI<FeishuTaskResponse>(
+            '/open-apis/task/v1/tasks',
+            'POST',
+            payload
+        );
+
+        if (response.code === 0 && response.data?.items?.[0]?.guid) {
+            return response.data.items[0].guid;
+        }
+
+        throw new Error(response.msg || 'Failed to create Feishu task');
+    }
+
+    /**
+     * 更新飞书任务（同步引擎用）
+     */
+    async updateFeishuTask(guid: string, payload: FeishuTaskPayload): Promise<void> {
+        await this.ensureAccessToken();
+
+        const response = await this.callAPI<FeishuTaskResponse>(
+            `/open-apis/task/v1/tasks/${guid}`,
+            'PATCH',
+            payload
+        );
+
+        if (response.code !== 0) {
+            throw new Error(response.msg || 'Failed to update Feishu task');
+        }
+    }
+
     // ==================== 飞书 API 方法 ====================
 
     /**
@@ -332,9 +400,7 @@ export class FeishuProvider extends APIDataSource {
         method: 'GET' | 'POST' | 'PATCH' | 'DELETE' = 'GET',
         body?: unknown
     ): Promise<T> {
-        if (!this.oauthConfig.accessToken) {
-            await this.ensureAccessToken();
-        }
+        await this.ensureAccessToken();
 
         const url = `https://open.feishu.cn${path}`;
 

@@ -83,6 +83,8 @@ export interface FeishuTokenResponseV2 {
  * 飞书 OAuth Scope 常量
  */
 export const FEISHU_SCOPES = {
+    /** 离线访问（启用 refresh_token 发放） */
+    OFFLINE_ACCESS: 'offline_access',
     /** 日历只读权限 */
     CALENDAR_READONLY: 'calendar:calendar:readonly',
     /** 任务读取权限 */
