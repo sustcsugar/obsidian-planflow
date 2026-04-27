@@ -10,7 +10,7 @@ type SidebarTab = 'taskList' | 'dailyTimeline';
 
 export class GCSidebarView extends ItemView {
 	private plugin: any;
-	private currentTab: SidebarTab = 'taskList';
+	private currentTab: SidebarTab = 'dailyTimeline';
 	private taskListTab: TaskListTab;
 	private dailyTimelineTab: DailyTimelineTab;
 	private contentContainer: HTMLElement | null = null;
