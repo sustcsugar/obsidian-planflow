@@ -308,6 +308,31 @@ export class SyncSettingsBuilder extends BaseBuilder {
 				// 任务清单展示区域（仅飞书）
 				{
 					const taskLists = syncConfig.api?.taskLists as FeishuTaskList[] || [];
+					const selectedGuid = syncConfig.api?.tasklistGuid || '';
+
+					if (taskLists.length === 0) {
+						const hintEl = document.createElement("div");
+						hintEl.style.marginTop = "12px";
+						hintEl.style.padding = "10px 14px";
+						hintEl.style.borderRadius = "6px";
+						hintEl.style.backgroundColor = "var(--background-secondary)";
+						hintEl.style.color = "var(--text-muted)";
+						hintEl.style.fontSize = "13px";
+						hintEl.setText("\u2191 \u8bf7\u5148\u70b9\u51fb\u4e0a\u65b9\u300c\u83b7\u53d6\u4efb\u52a1\u6e05\u5355\u300d\u6309\u94ae\u83b7\u53d6\u6e05\u5355\u5217\u8868\uff0c\u7136\u540e\u9009\u62e9\u540c\u6b65\u76ee\u6807\u6e05\u5355\u3002\u672a\u9009\u62e9\u6e05\u5355\u65f6\u65e0\u6cd5\u4f7f\u7528\u540c\u6b65\u529f\u80fd\u3002");
+						this.containerEl.appendChild(hintEl);
+					} else if (!selectedGuid) {
+						const hintEl = document.createElement("div");
+						hintEl.style.marginTop = "12px";
+						hintEl.style.padding = "10px 14px";
+						hintEl.style.borderRadius = "6px";
+						hintEl.style.border = "1px solid var(--interactive-accent)";
+						hintEl.style.backgroundColor = "var(--interactive-accent-hover)";
+						hintEl.style.color = "var(--text-on-accent)";
+						hintEl.style.fontSize = "13px";
+						hintEl.style.fontWeight = "500";
+						hintEl.setText("\u26a0 \u8bf7\u5728\u4e0b\u65b9\u9009\u62e9\u4e00\u4e2a\u4efb\u52a1\u6e05\u5355\u4f5c\u4e3a\u540c\u6b65\u76ee\u6807\u3002\u672a\u9009\u62e9\u6e05\u5355\u65f6\u65e0\u6cd5\u4f7f\u7528\u540c\u6b65\u529f\u80fd\uff0c\u4e0d\u5141\u8bb8\u540c\u6b65\u5230\u9ed8\u8ba4\u6e05\u5355\u3002");
+						this.containerEl.appendChild(hintEl);
+					}
 
 					if (taskLists.length > 0) {
 						const taskListEl = document.createElement("div");
@@ -320,7 +345,7 @@ export class SyncSettingsBuilder extends BaseBuilder {
 						headerEl.style.fontWeight = "bold";
 						headerEl.style.marginBottom = "12px";
 						headerEl.style.fontSize = "14px";
-						headerEl.textContent = "飞书任务清单列表 (" + taskLists.length + " 个)";
+						headerEl.textContent = "\u98de\u4e66\u4efb\u52a1\u6e05\u5355\u5217\u8868 (" + taskLists.length + " \u4e2a)";
 						taskListEl.appendChild(headerEl);
 
 						const listEl = document.createElement("div");
@@ -331,17 +356,22 @@ export class SyncSettingsBuilder extends BaseBuilder {
 						listEl.style.overflowY = "auto";
 
 						taskLists.forEach((tl) => {
+							const isSelected = tl.guid === selectedGuid;
 							const itemEl = document.createElement("div");
 							itemEl.style.padding = "12px";
-							itemEl.style.border = "1px solid var(--background-modifier-border)";
+							itemEl.style.border = isSelected
+								? "2px solid var(--interactive-accent)"
+								: "1px solid var(--background-modifier-border)";
 							itemEl.style.borderRadius = "6px";
-							itemEl.style.backgroundColor = "var(--background-secondary)";
+							itemEl.style.backgroundColor = isSelected
+								? "var(--interactive-accent-hover)"
+								: "var(--background-secondary)";
 							itemEl.style.minWidth = "220px";
 							itemEl.style.flex = "0 0 auto";
 
 							const titleDiv = itemEl.createDiv();
 							titleDiv.style.fontWeight = "500";
-							titleDiv.setText(tl.name);
+							titleDiv.setText((isSelected ? "\u2713 " : "") + tl.name);
 
 							const idDiv = itemEl.createDiv();
 							idDiv.style.fontSize = "11px";
@@ -356,7 +386,7 @@ export class SyncSettingsBuilder extends BaseBuilder {
 								creatorDiv.style.fontSize = "12px";
 								creatorDiv.style.color = "var(--text-muted)";
 								creatorDiv.style.marginTop = "4px";
-								creatorDiv.setText("创建者: " + tl.creator.id);
+								creatorDiv.setText("\u521b\u5efa\u8005: " + tl.creator.id);
 							}
 
 							if (tl.members && tl.members.length > 0) {
@@ -364,25 +394,78 @@ export class SyncSettingsBuilder extends BaseBuilder {
 								memberDiv.style.fontSize = "12px";
 								memberDiv.style.color = "var(--text-muted)";
 								memberDiv.style.marginTop = "4px";
-								memberDiv.setText("成员: " + tl.members.length + " 人");
+								memberDiv.setText("\u6210\u5458: " + tl.members.length + " \u4eba");
 							}
 
 							const selectBtn = document.createElement("button");
-							selectBtn.textContent = "选择";
-							selectBtn.style.marginTop = "10px";
+							selectBtn.textContent = isSelected ? "\u5df2\u9009\u62e9" : "\u9009\u62e9";
 							selectBtn.style.padding = "6px 16px";
 							selectBtn.style.fontSize = "12px";
-							selectBtn.className = "mod-cta";
-							selectBtn.onclick = () => {
-								new Notice("已选择任务清单：" + tl.name);
+							selectBtn.className = isSelected ? "mod-cta" : "";
+							selectBtn.onclick = async () => {
+								if (!syncConfig.api) syncConfig.api = {} as any;
+								syncConfig.api.tasklistGuid = tl.guid;
+								await this.plugin.saveSettings();
+								new Notice("\u5df2\u9009\u62e9\u4efb\u52a1\u6e05\u5355\uff1a" + tl.name);
+								this.refreshSettingsPanel();
 							};
 							itemEl.appendChild(selectBtn);
+
+							const testBtn = document.createElement("button");
+							testBtn.textContent = "测试同步";
+							testBtn.style.padding = "6px 16px";
+							testBtn.style.fontSize = "12px";
+							testBtn.style.marginLeft = "8px";
+							testBtn.onclick = async () => {
+								await this.testSyncToTasklist(tl.guid, tl.name);
+							};
+							itemEl.appendChild(testBtn);
 
 							listEl.appendChild(itemEl);
 						});
 
 						taskListEl.appendChild(listEl);
 						this.containerEl.appendChild(taskListEl);
+					}
+				}
+
+				// 清除清单任务（仅飞书）
+				{
+					const taskLists = syncConfig.api?.taskLists as FeishuTaskList[] || [];
+					if (taskLists.length > 0) {
+						const clearSetting = new Setting(this.containerEl)
+							.setName("\u6e05\u9664\u6e05\u5355\u4efb\u52a1")
+							.setDesc("\u5220\u9664\u6307\u5b9a\u6e05\u5355\u4e2d\u7684\u6240\u6709\u98de\u4e66\u4efb\u52a1\uff08\u4e0d\u53ef\u6062\u590d\uff0c\u8bf7\u8c28\u614e\u64cd\u4f5c\uff09");
+
+						const selectEl = document.createElement("select") as HTMLSelectElement;
+						selectEl.className = "dropdown";
+						selectEl.style.marginRight = "8px";
+						selectEl.style.minWidth = "160px";
+						taskLists.forEach((tl) => {
+							const opt = document.createElement("option");
+							opt.value = tl.guid;
+							opt.textContent = tl.name;
+							if (tl.guid === syncConfig.api?.tasklistGuid) opt.selected = true;
+							selectEl.appendChild(opt);
+						});
+
+						const clearBtn = document.createElement("button");
+						clearBtn.textContent = "\u6e05\u9664\u4efb\u52a1";
+						clearBtn.className = "mod-warning";
+						clearBtn.style.padding = "6px 16px";
+						clearBtn.style.fontSize = "12px";
+						clearBtn.onclick = async () => {
+							const selectedTasklistGuid = selectEl.value;
+							const selectedName = taskLists.find(t => t.guid === selectedTasklistGuid)?.name || selectedTasklistGuid;
+							const confirmed = confirm(`确定要清除清单「${selectedName}」中的所有任务吗？
+
+此操作将删除该清单下的所有飞书任务，不可恢复！`);
+							if (!confirmed) return;
+							await this.clearFeishuTasklistTasks(selectedTasklistGuid, selectedName);
+						};
+
+						clearSetting.controlEl.appendChild(selectEl);
+						clearSetting.controlEl.appendChild(clearBtn);
 					}
 				}
 
@@ -1102,6 +1185,7 @@ export class SyncSettingsBuilder extends BaseBuilder {
 				const userInfo = await FeishuUserApi.getUserInfo(tokenResponse.access_token, requestFetch);
 				if (userInfo) {
 					updateData.userId = userInfo.userId;
+					updateData.userOpenId = userInfo.openId;
 					updateData.userName = userInfo.name;
 				}
 			} catch (e) {
@@ -1546,7 +1630,11 @@ export class SyncSettingsBuilder extends BaseBuilder {
 			await this.saveAndRefresh();
 			this.refreshSettingsPanel();
 
-			new Notice('✅ 成功获取 ' + taskLists.length + ' 个任务清单');
+			if (taskLists.length === 0) {
+    new Notice('未找到任务清单，请先在飞书中创建至少一个任务清单，然后重新获取');
+} else {
+    new Notice('✅ 成功获取 ' + taskLists.length + ' 个任务清单');
+}
 
 			Logger.debug('SyncSettingsBuilder', 'Feishu task lists',
 				taskLists.map((tl, index) => ({
@@ -1573,6 +1661,175 @@ export class SyncSettingsBuilder extends BaseBuilder {
 	}
 
 	/**
+	 * 测试同步：向指定清单推送 10 个测试任务
+	 */
+	/**
+	 * 测试同步：向指定清单推送 10 个测试任务
+	 */
+	private async testSyncToTasklist(tasklistGuid: string, tasklistName: string): Promise<void> {
+		const syncConfig = this.getSyncConfiguration();
+		const apiConfig = syncConfig?.api;
+
+		if (!apiConfig?.accessToken) {
+			new Notice("请先完成飞书授权");
+			return;
+		}
+
+		const clientId = apiConfig.clientId || apiConfig.appId;
+		const clientSecret = apiConfig.clientSecret || apiConfig.appSecret;
+
+		if (!clientId || !clientSecret) {
+			new Notice("请先配置飞书 App ID 和 App Secret");
+			return;
+		}
+
+		const confirmed = confirm(
+			"将向清单「" + tasklistName + "」中创建 10 个测试任务，\n" +
+			"用于验证同步功能是否正常。\n\n确定继续？"
+		);
+		if (!confirmed) return;
+
+		try {
+			const provider = new FeishuProvider({
+				enabled: true,
+				syncDirection: "export-only",
+				autoSync: false,
+				syncInterval: 0,
+				conflictResolution: "local-win",
+				api: {
+					provider: "feishu",
+					accessToken: apiConfig.accessToken,
+					refreshToken: apiConfig.refreshToken,
+					tokenExpireAt: apiConfig.tokenExpireAt,
+					clientId,
+					clientSecret,
+					redirectUri: apiConfig.redirectUri,
+				},
+			});
+
+			new Notice("正在向「" + tasklistName + "」创建测试任务...", 5000);
+
+			let created = 0;
+			let failed = 0;
+			const now = Date.now();
+
+			for (let i = 1; i <= 10; i++) {
+				try {
+					const payload: any = {
+						summary: "测试任务 " + i + "/10 - " + new Date().toLocaleString("zh-CN"),
+						description: "由 Gantt Calendar 插件创建的同步测试任务，可安全删除。",
+						due: { timestamp: String(now + i * 24 * 60 * 60 * 1000) },
+						priority: i <= 3 ? "high" : "normal",
+						completed: false,
+					};
+
+					if (apiConfig.userOpenId) {
+						payload.assignee = { id: apiConfig.userOpenId, type: "open_id" };
+					}
+
+					await provider.createFeishuTask(payload, tasklistGuid);
+					created++;
+
+					if (i % 3 === 0) {
+						new Notice("已创建 " + created + "/10 个测试任务...");
+					}
+				} catch (err) {
+					failed++;
+					Logger.warn("SyncSettingsBuilder", "Test task failed: " + i, err);
+				}
+			}
+
+			const msg = "测试同步完成: 成功 " + created + " 个" +
+				(failed > 0 ? "，失败 " + failed + " 个" : "") +
+				"\n清单: " + tasklistName;
+			new Notice(msg, 8000);
+			Logger.info("SyncSettingsBuilder", "Test sync result", { tasklistGuid, created, failed });
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : String(error);
+			Logger.error("SyncSettingsBuilder", "Test sync failed", error);
+			new Notice("测试同步失败: " + errorMsg);
+		}
+	}
+
+	private async clearFeishuTasklistTasks(tasklistGuid: string, tasklistName: string): Promise<void> {
+		const syncConfig = this.getSyncConfiguration();
+		const apiConfig = syncConfig?.api;
+
+		if (!apiConfig?.accessToken) {
+			new Notice("请先完成飞书授权");
+			return;
+		}
+
+		const clientId = apiConfig.clientId || apiConfig.appId;
+		const clientSecret = apiConfig.clientSecret || apiConfig.appSecret;
+
+		if (!clientId || !clientSecret) {
+			new Notice("请先配置飞书 App ID 和 App Secret");
+			return;
+		}
+
+		try {
+			new Notice("正在获取清单「" + tasklistName + "」中的任务...");
+
+			const requestFetch = FeishuHttpClient.createRequestFetch(requestUrl);
+			const tasks = await FeishuTaskApi.getTasksByTaskList(
+				apiConfig.accessToken,
+				tasklistGuid,
+				tasklistName,
+				requestFetch
+			);
+
+			if (tasks.length === 0) {
+				new Notice("清单「" + tasklistName + "」中没有任务");
+				return;
+			}
+
+			new Notice("找到 " + tasks.length + " 个任务，正在删除...");
+
+			const provider = new FeishuProvider({
+				enabled: true,
+				syncDirection: "export-only",
+				autoSync: false,
+				syncInterval: 0,
+				conflictResolution: "local-win",
+				api: {
+					provider: "feishu",
+					accessToken: apiConfig.accessToken,
+					refreshToken: apiConfig.refreshToken,
+					tokenExpireAt: apiConfig.tokenExpireAt,
+					clientId,
+					clientSecret,
+					redirectUri: apiConfig.redirectUri,
+				},
+			});
+
+			let deleted = 0;
+			let failed = 0;
+
+			for (const task of tasks) {
+				try {
+					await provider.deleteFeishuTask(task.task_guid);
+					deleted++;
+					if (deleted % 10 === 0) {
+						new Notice("已删除 " + deleted + "/" + tasks.length + " 个任务...");
+					}
+				} catch (err) {
+					failed++;
+					Logger.warn("SyncSettingsBuilder", "Failed to delete task: " + task.task_guid, err);
+				}
+			}
+
+			const msg = "清除完成: 删除 " + deleted + " 个" + (failed > 0 ? "，失败 " + failed + " 个" : "");
+			new Notice(msg, 8000);
+			Logger.info("SyncSettingsBuilder", "Clear tasklist result:", { deleted, failed });
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : String(error);
+			Logger.error("SyncSettingsBuilder", "Failed to clear tasklist tasks", error);
+			new Notice("清除任务失败: " + errorMsg);
+		}
+	}
+
+		/**
 	 * 打开 OAuth 授权页面
 	 */
 	private openOAuthPage(): void {

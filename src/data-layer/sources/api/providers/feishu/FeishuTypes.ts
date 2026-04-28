@@ -123,6 +123,7 @@ export interface FeishuUserInfoResponse {
  */
 export interface FeishuUserInfo {
     userId: string;
+    openId: string;
     name: string;
     enName: string;
     email: string;
@@ -320,5 +321,20 @@ export interface FeishuTaskResponse {
         items?: FeishuTaskRaw[];
         page_token?: string;
         has_more?: boolean;
+    };
+}
+
+/**
+ * 飞书任务创建/更新响应（v2 API）
+ *
+ * v2 创建和更新接口返回单个 task 对象，而非 items 列表。
+ * POST /open-apis/task/v2/tasks → { data: { task: { guid, ... } } }
+ * PATCH /open-apis/task/v2/tasks/{guid} → { data: { task: { guid, ... } } }
+ */
+export interface FeishuTaskCreateResponse {
+    code: number;
+    msg: string;
+    data?: {
+        task?: FeishuTaskRaw;
     };
 }

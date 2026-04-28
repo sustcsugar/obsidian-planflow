@@ -24,6 +24,9 @@ import { Logger } from '../../utils/logger';
 /** 冲突解决策略 */
 export type ConflictStrategy = 'newest-win' | 'local-win' | 'remote-win';
 
+/** 同步进度回调 */
+export type SyncProgressCallback = (stage: string) => void;
+
 /** 同步选项 */
 export interface FeishuSyncOptions {
     /** 冲突解决策略 */
@@ -36,6 +39,10 @@ export interface FeishuSyncOptions {
     globalFilter?: string;
     /** 任务清单 GUID（可选，用于限定同步到特定任务清单） */
     tasklistGuid?: string;
+    /** 同步进度回调（可选，用于 UI 进度展示） */
+    onProgress?: SyncProgressCallback;
+    /** 授权用户的 open_id，用于设置任务负责人 */
+    creatorOpenId?: string;
 }
 
 /** 同步结果 */
@@ -52,12 +59,12 @@ interface TaskMatch {
     feishuTask?: FeishuTaskRaw;
     obsidianTask?: GCTask;
     /** 匹配类型 */
-    matchType: 'guid' | 'fuzzy' | 'feishu-only' | 'obsidian-only';
+    matchType: 'guid' | 'fuzzy' | 'feishu-only' | 'obsidian-only' | 'orphaned';
 }
 
 /** 单条变更 */
 interface PendingChange {
-    type: 'push-create' | 'push-update' | 'pull-create' | 'pull-update' | 'conflict';
+    type: 'push-create' | 'push-update' | 'pull-create' | 'pull-update' | 'conflict' | 'clear-guid';
     feishuTask?: FeishuTaskRaw;
     obsidianTask?: GCTask;
 }
@@ -89,42 +96,85 @@ export class FeishuTaskSync {
      */
     async sync(): Promise<SyncResult> {
         const result: SyncResult = { pushed: 0, pulled: 0, conflicted: 0, skipped: 0, errors: [] };
+        const onProgress = this.options.onProgress;
 
         try {
             await this.state.load();
 
+            Logger.info('FeishuTaskSync', 'Starting bidirectional sync (v2 API)', {
+                targetFile: this.options.targetFile,
+                conflictStrategy: this.options.conflictStrategy,
+                tasklistGuid: this.options.tasklistGuid || 'none',
+            });
+
             // 1. 获取双方任务
+            onProgress?.('🔄 飞书同步: 获取飞书任务...');
             const feishuTasks = await this.fetchFeishuTasks();
+
+            onProgress?.('🔄 飞书同步: 获取本地任务...');
             const obsidianTasks = await this.fetchObsidianTasks();
 
+            Logger.info('FeishuTaskSync', `Fetched: ${feishuTasks.length} Feishu tasks, ${obsidianTasks.length} Obsidian tasks`);
+
             // 2. 匹配
+            onProgress?.('🔄 飞书同步: 匹配任务...');
             const matches = this.matchTasks(feishuTasks, obsidianTasks);
 
             // 3. 检测变更
             const changes = this.detectChanges(matches);
 
+            Logger.info('FeishuTaskSync', `Detected ${changes.length} pending changes`);
+
             // 4. 应用变更
-            for (const change of changes) {
+            const total = changes.length;
+            for (let i = 0; i < changes.length; i++) {
+                const change = changes[i];
+                onProgress?.(`🔄 飞书同步: ${this.changeLabel(change.type)} ${i + 1}/${total}`);
                 try {
                     await this.applyChange(change, result);
                 } catch (error) {
-                    const msg = error instanceof Error ? error.message : String(error);
+                    const taskDesc = change.obsidianTask?.description || change.feishuTask?.summary || 'unknown';
+                    const msg = `[${change.type}] "${taskDesc}": ${error instanceof Error ? error.message : String(error)}`;
                     result.errors.push(msg);
-                    Logger.error('FeishuTaskSync', 'Apply change failed', error);
+                    Logger.error('FeishuTaskSync', `Apply change failed: ${msg}`, error);
                 }
             }
 
             // 5. 保存状态
+            onProgress?.('🔄 飞书同步: 保存状态...');
             await this.state.save();
 
-            Logger.info('FeishuTaskSync', `Sync complete: pushed=${result.pushed}, pulled=${result.pulled}, conflicted=${result.conflicted}, skipped=${result.skipped}`);
+            const parts: string[] = [];
+            if (result.pushed > 0) parts.push(`推送${result.pushed}`);
+            if (result.pulled > 0) parts.push(`拉取${result.pulled}`);
+            if (result.conflicted > 0) parts.push(`冲突${result.conflicted}`);
+            const summary = parts.length > 0 ? parts.join('/') : '无变更';
+            onProgress?.(`✅ 飞书同步完成: ${summary}`);
+
+            Logger.info('FeishuTaskSync', `Sync complete: pushed=${result.pushed}, pulled=${result.pulled}, conflicted=${result.conflicted}, skipped=${result.skipped}, errors=${result.errors.length}`);
         } catch (error) {
             const msg = error instanceof Error ? error.message : String(error);
             result.errors.push(msg);
             Logger.error('FeishuTaskSync', 'Sync failed', error);
+            onProgress?.('❌ 飞书同步失败');
         }
 
         return result;
+    }
+
+    /**
+     * 获取变更类型的中文标签
+     */
+    private changeLabel(type: string): string {
+        const labels: Record<string, string> = {
+            'push-create': '推送新建',
+            'push-update': '推送更新',
+            'pull-create': '拉取新建',
+            'pull-update': '拉取更新',
+            'conflict': '解决冲突',
+            'clear-guid': '清理残留',
+        };
+        return labels[type] || type;
     }
 
     // ==================== 数据获取 ====================
@@ -216,10 +266,15 @@ export class FeishuTaskSync {
             matches.push({ feishuTask: feishu, obsidianTask: undefined, matchType: 'feishu-only' });
         }
 
-        // 4. 仅在 Obsidian 存在的任务
+        // 4. 区分 orphaned（有 GUID 但飞书侧已删除）和 obsidian-only（纯本地任务）
         for (const task of obsidianTasks) {
             if (!matchedObsidian.has(task)) {
-                matches.push({ obsidianTask: task, matchType: 'obsidian-only' });
+                if (task.feishuGuid) {
+                    // 有 GUID 但飞书侧无对应任务 → 飞书中已被删除
+                    matches.push({ obsidianTask: task, matchType: 'orphaned' });
+                } else {
+                    matches.push({ obsidianTask: task, matchType: 'obsidian-only' });
+                }
             }
         }
 
@@ -288,6 +343,12 @@ export class FeishuTaskSync {
                     break;
                 case 'feishu-only':
                     change = { type: 'pull-create', feishuTask: match.feishuTask };
+                    break;
+                case 'orphaned':
+                    // 飞书侧已删除，清除 Obsidian 中的残留 GUID
+                    if (match.obsidianTask) {
+                        change = { type: 'clear-guid', obsidianTask: match.obsidianTask };
+                    }
                     break;
                 case 'obsidian-only':
                     if (match.obsidianTask) {
@@ -376,6 +437,9 @@ export class FeishuTaskSync {
             case 'conflict':
                 await this.resolveConflict(change, result);
                 break;
+            case 'clear-guid':
+                await this.clearStaleGuid(change.obsidianTask!, result);
+                break;
             default:
                 result.skipped++;
         }
@@ -385,7 +449,15 @@ export class FeishuTaskSync {
     private async pushCreate(task: GCTask, result: SyncResult): Promise<void> {
         const payload = toFeishuTaskPayload(task);
         payload.completed = toFeishuCompleted(task);
-        const guid = await this.provider.createFeishuTask(payload);
+
+        // 设置负责人为授权用户
+        if (this.options.creatorOpenId) {
+            payload.assignee = { id: this.options.creatorOpenId, type: 'open_id' };
+        }
+
+        Logger.info('FeishuTaskSync', `Push creating: "${task.description?.substring(0, 30)}" → tasklist=${this.options.tasklistGuid || 'default'}`);
+
+        const guid = await this.provider.createFeishuTask(payload, this.options.tasklistGuid);
 
         // 写回 GUID 到 Obsidian
         await this.writeGuidToObsidian(task, guid);
@@ -536,13 +608,30 @@ export class FeishuTaskSync {
         Logger.info('FeishuTaskSync', `Conflict resolved via ${this.options.conflictStrategy}: ${task.description}`);
     }
 
+    /** 清理飞书侧已删除的残留 GUID */
+    private async clearStaleGuid(task: GCTask, result: SyncResult): Promise<void> {
+        const oldGuid = task.feishuGuid;
+        await this.updateObsidianTaskLine(task, {
+            feishuGuid: null,     // null → 清除 GUID
+            feishuDesc: null,     // null → 清除描述
+        });
+
+        // 从同步状态中移除
+        if (oldGuid) {
+            this.state.removeRecord(oldGuid);
+        }
+
+        Logger.info('FeishuTaskSync', `Cleared stale GUID ${oldGuid} from: ${task.description}`);
+    }
+
     // ==================== Obsidian 文件操作 ====================
 
     /**
-     * 生成任务行文本
+     * 生成任务行文本（含列表标记）
+     *
+     * serializeTask 只返回 "[ ] 内容" 部分，需补上 "- " 列表前缀。
      */
     private buildTaskLine(updates: GCTaskUpdates): string {
-        // 使用一个模拟任务对象来调用序列化器
         const mockTask: GCTask = {
             filePath: '',
             fileName: '',
@@ -553,8 +642,8 @@ export class FeishuTaskSync {
             priority: updates.priority || 'normal',
             dueDate: updates.dueDate,
             startDate: updates.startDate,
-            feishuGuid: updates.feishuGuid,
-            feishuDesc: updates.feishuDesc,
+            feishuGuid: updates.feishuGuid ?? undefined,
+            feishuDesc: updates.feishuDesc ?? undefined,
         };
 
         const taskUpdates: TaskUpdates = {
@@ -567,12 +656,15 @@ export class FeishuTaskSync {
             priority: updates.priority as any,
         };
 
-        // 使用 dataview 格式以兼容性更好
-        return serializeTask(this.app, mockTask, taskUpdates, 'dataview');
+        // serializeTask 返回 "[ ] 内容"，需要补上 "- " 列表标记
+        const taskContent = serializeTask(this.app, mockTask, taskUpdates, 'dataview');
+        return `- ${taskContent}`;
     }
 
     /**
      * 更新 Obsidian 文件中的单行任务
+     *
+     * 保留原始行的缩进和列表标记（- 或 *），只替换任务内容部分。
      */
     private async updateObsidianTaskLine(task: GCTask, updates: GCTaskUpdates): Promise<void> {
         const file = this.app.vault.getAbstractFileByPath(task.filePath);
@@ -588,7 +680,12 @@ export class FeishuTaskSync {
                 throw new Error(`Line ${task.lineNumber} out of range in ${task.filePath}`);
             }
 
-            // 构建更新后的任务行
+            const originalLine = lines[idx];
+
+            // 提取原始缩进和列表标记（与 taskUpdater.ts 保持一致）
+            const listMatch = originalLine.match(/^(\s*)([-*])\s+\[.\]/);
+
+            // 构建更新后的任务内容
             const taskUpdates: TaskUpdates = {
                 completed: updates.completed !== undefined ? updates.completed : task.completed,
                 content: updates.description,
@@ -599,8 +696,17 @@ export class FeishuTaskSync {
                 priority: updates.priority as any,
             };
 
-            const newLine = serializeTask(this.app, task, taskUpdates, task.format || 'dataview');
-            lines[idx] = newLine;
+            const taskContent = serializeTask(this.app, task, taskUpdates, task.format || 'dataview');
+
+            // 拼接完整行：缩进 + 列表标记 + 空格 + 任务内容
+            if (listMatch) {
+                const indent = listMatch[1];
+                const listMarker = listMatch[2];
+                lines[idx] = `${indent}${listMarker} ${taskContent}`;
+            } else {
+                // 降级处理：原始行没有列表标记，直接补上 "- "
+                lines[idx] = `- ${taskContent}`;
+            }
 
             return lines.join('\n');
         });

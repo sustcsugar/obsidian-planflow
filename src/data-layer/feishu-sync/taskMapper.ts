@@ -16,6 +16,7 @@ export interface FeishuTaskPayload {
     start?: { timestamp?: string; is_all_day?: boolean };
     priority?: string;
     completed?: boolean;
+    assignee?: { id: string; type: string };
 }
 
 // ==================== GCTask → 飞书 ====================
@@ -75,8 +76,8 @@ export function toFeishuCompleted(task: GCTask): boolean {
  */
 export interface GCTaskUpdates {
     description?: string;
-    feishuGuid?: string;
-    feishuDesc?: string;
+    feishuGuid?: string | null;   // null 表示清除飞书 GUID
+    feishuDesc?: string | null;   // null 表示清除飞书描述
     completed?: boolean;
     priority?: string;
     dueDate?: Date;

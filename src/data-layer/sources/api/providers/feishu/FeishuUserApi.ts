@@ -48,6 +48,7 @@ export class FeishuUserApi {
         const userInfo = data.data;
         return {
             userId: userInfo.user_id,
+            openId: userInfo.open_id,
             name: userInfo.name,
             enName: userInfo.en_name,
             email: userInfo.email,

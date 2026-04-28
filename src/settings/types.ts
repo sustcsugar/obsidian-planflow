@@ -129,12 +129,16 @@ export interface GanttCalendarSettings {
 
 			// 用户信息
 			userId?: string;
+			userOpenId?: string;
 			userName?: string;
 
 			// 旧字段保留兼容（飞书）
 			appId?: string;
 			appSecret?: string;
 			tenantId?: string;
+
+			// 飞书任务清单
+			tasklistGuid?: string;    // 同步目标任务清单 GUID
 		};
 		caldav?: {
 			provider: 'google' | 'outlook' | 'apple' | 'custom';
