@@ -423,7 +423,8 @@ export class SyncSettingsBuilder extends BaseBuilder {
 						.setDesc(syncConfig.api.userName ? `${syncConfig.api.userName} (${syncConfig.api.userId || 'Unknown'})` : syncConfig.api.userId || 'Unknown')
 						.addExtraButton(button => button
 							.setIcon('user')
-							.setTooltip('飞书用户'))
+							.setTooltip('测试连接，获取用户信息')
+							.onClick(() => this.testFeishuConnection(syncConfig)))
 				);
 			}
 
@@ -631,6 +632,93 @@ export class SyncSettingsBuilder extends BaseBuilder {
 		const maskedLength = Math.min(token.length - 12, 20);
 		return `${prefix}${'*'.repeat(maskedLength)}${suffix}`;
 	}
+
+	// ==================== 连接测试 ====================
+
+	private async testFeishuConnection(syncConfig: any): Promise<void> {
+		const apiConfig = syncConfig.api;
+
+		if (!apiConfig?.accessToken) {
+			new Notice('未授权：请先完成飞书授权');
+			return;
+		}
+
+		const isExpired = apiConfig.tokenExpireAt && Date.now() > apiConfig.tokenExpireAt;
+		const expireInfo = apiConfig.tokenExpireAt
+			? FeishuOAuth.formatExpireTime(apiConfig.tokenExpireAt)
+			: '未知';
+
+		new Notice('正在测试飞书连接...');
+
+		try {
+			const requestFetch = FeishuHttpClient.createRequestFetch(requestUrl);
+			const userInfo = await FeishuUserApi.getUserInfo(apiConfig.accessToken, requestFetch);
+
+			const parts: string[] = [];
+			parts.push('✅ 飞书连接测试成功');
+			parts.push('');
+			parts.push('用户信息:');
+			parts.push(`  名称: ${userInfo.name}`);
+			if (userInfo.enName) parts.push(`  英文名: ${userInfo.enName}`);
+			parts.push(`  用户ID: ${userInfo.userId}`);
+			parts.push(`  OpenID: ${userInfo.openId}`);
+			if (userInfo.email) parts.push(`  邮箱: ${userInfo.email}`);
+
+			parts.push('');
+			parts.push('令牌状态:');
+			parts.push(`  过期时间: ${new Date(apiConfig.tokenExpireAt).toLocaleString()}`);
+			parts.push(`  状态: ${isExpired ? '已过期' : '✅ 有效 (' + expireInfo + ')'}`);
+
+			parts.push('');
+			const taskListCount = syncConfig.api?.taskLists?.length || 0;
+			parts.push(`已授权清单: ${taskListCount} 个`);
+			if (syncConfig.api?.tasklistGuid) {
+				const selectedList = syncConfig.api?.taskLists?.find((tl: any) => tl.guid === syncConfig.api.tasklistGuid);
+				if (selectedList) {
+					parts.push(`当前清单: ${selectedList.name}`);
+				}
+			}
+
+			new Notice(parts.join('\n'), 10000);
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : String(error);
+
+			const parts: string[] = [];
+			parts.push('❌ 飞书连接测试失败');
+			parts.push('');
+			parts.push(`错误信息: ${errorMsg}`);
+
+			const codeMatch = errorMsg.match(/错误码[：:]\s*(\d+)/) || errorMsg.match(/code[：:]\s*(\d+)/i);
+			if (codeMatch) {
+				parts.push(`错误码: ${codeMatch[1]}`);
+			}
+
+			parts.push('');
+			parts.push('令牌状态:');
+			if (apiConfig.tokenExpireAt) {
+				parts.push(`  过期时间: ${new Date(apiConfig.tokenExpireAt).toLocaleString()}`);
+			}
+			parts.push(`  状态: ${isExpired ? '已过期' : '有效 (' + expireInfo + ')'}`);
+
+			if (errorMsg.includes('401')) {
+				parts.push('');
+				parts.push('可能原因: Access Token 无效或已过期');
+				parts.push('建议: 请重新授权获取新的令牌');
+			} else if (errorMsg.includes('403')) {
+				parts.push('');
+				parts.push('可能原因: 权限不足或应用未通过审核');
+				parts.push('建议: 检查应用权限配置和应用审核状态');
+			} else if (errorMsg.includes('network') || errorMsg.includes('fetch')) {
+				parts.push('');
+				parts.push('可能原因: 网络连接问题');
+				parts.push('建议: 检查网络连接或防火墙设置');
+			}
+
+			new Notice(parts.join('\n'), 12000);
+			Logger.error('SyncSettingsBuilder', 'Connection test failed', error);
+		}
+	}
+
 
 	// ==================== 配置读写 ====================
 
