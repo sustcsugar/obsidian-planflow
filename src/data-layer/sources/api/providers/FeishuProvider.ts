@@ -302,64 +302,132 @@ export class FeishuProvider extends APIDataSource {
     /**
      * 创建飞书任务（同步引擎用）
      *
-     * 使用 v2 API 创建任务，支持 tasklist 分配。
+     * 使用 v2 API 创建任务，两步法：先创建任务，再将其加入指定清单。
      * v2 响应格式: { data: { task: { guid: "..." } } }
      */
     async createFeishuTask(payload: FeishuTaskPayload, tasklistGuid?: string): Promise<string> {
         await this.ensureAccessToken();
 
-        const body: Record<string, unknown> = { ...payload };
-        if (tasklistGuid) {
-            body.tasklists = [{ tasklist_guid: tasklistGuid }];
+        // 构建 v2 API 请求体（只使用 v2 认识的字段）
+        const body: Record<string, unknown> = {};
+
+        if (payload.summary) body.summary = payload.summary;
+        if (payload.description) body.description = payload.description;
+
+        // v2 API 时间字段使用毫秒时间戳字符串
+        if (payload.due?.timestamp) {
+            body.due_at = payload.due.timestamp;
+        }
+        if (payload.start?.timestamp) {
+            body.start_at = payload.start.timestamp;
         }
 
-        // assignee 通过 members 字段设置（飞书 v2 API 格式）
+        // v2 完成状态：completed_at（毫秒时间戳）
+        if (payload.completed_at !== undefined) {
+            body.completed_at = payload.completed_at;
+        }
+
+        // assignee 通过 members 字段设置
         if (payload.assignee) {
             body.members = [{
-                type: 'user',
                 id: payload.assignee.id,
+                type: 'user',
                 role: 'assignee',
             }];
-            delete body.assignee;
         }
 
-        Logger.debug('FeishuProvider', 'Creating task (v2)', {
-            summary: payload.summary?.substring(0, 50),
+        Logger.info('FeishuProvider', 'Creating task (v2)', {
+            summary: (payload.summary || '').substring(0, 50),
             tasklist: tasklistGuid || 'default',
             hasMembers: !!body.members,
+            requestBody: body,
         });
 
+        // 步骤1: 创建任务
         const response = await this.callAPI<FeishuTaskCreateResponse>(
             '/open-apis/task/v2/tasks',
             'POST',
             body
         );
 
-        if (response.code === 0 && response.data?.task?.guid) {
-            Logger.info('FeishuProvider', `Task created: guid=${response.data.task.guid}`);
-            return response.data.task.guid;
+        if (response.code !== 0 || !response.data?.task?.guid) {
+            const errMsg = response.msg || 'Unknown error';
+            Logger.error('FeishuProvider', `Create task failed: code=${response.code}, msg=${errMsg}`);
+            throw new Error(`创建飞书任务失败: ${errMsg} (code: ${response.code})`);
         }
 
-        const errMsg = response.msg || 'Unknown error';
-        Logger.error('FeishuProvider', `Create task failed: code=${response.code}, msg=${errMsg}`);
-        throw new Error(`创建飞书任务失败: ${errMsg} (code: ${response.code})`);
+        const guid = response.data.task.guid;
+        Logger.info('FeishuProvider', `Task created: guid=${guid}`);
+
+        // 步骤2: 将任务加入指定清单
+        if (tasklistGuid) {
+            try {
+                await this.addTaskToTasklist(guid, tasklistGuid);
+                Logger.info('FeishuProvider', `Task ${guid} added to tasklist ${tasklistGuid}`);
+            } catch (error) {
+                // 加入清单失败不影响主流程，记录警告即可
+                Logger.warn('FeishuProvider', `Failed to add task ${guid} to tasklist ${tasklistGuid}`, error);
+            }
+        }
+
+        return guid;
+    }
+
+    /**
+     * 将任务加入指定清单
+     */
+    private async addTaskToTasklist(taskGuid: string, tasklistGuid: string): Promise<void> {
+        await this.callAPI<FeishuTaskCreateResponse>(
+            `/open-apis/task/v2/tasks/${taskGuid}/add_tasklist`,
+            'POST',
+            {
+                tasklist_guid: tasklistGuid,
+            }
+        );
     }
 
     /**
      * 更新飞书任务（同步引擎用）
      *
-     * 使用 v2 API 更新任务。
-     * v2 响应格式: { data: { task: { guid: "..." } } }
+     * 使用 v2 API 更新任务。将 FeishuTaskPayload 转换为 v2 合法字段。
      */
     async updateFeishuTask(guid: string, payload: FeishuTaskPayload): Promise<void> {
         await this.ensureAccessToken();
 
-        Logger.debug('FeishuProvider', `Updating task ${guid} (v2)`, { fields: Object.keys(payload) });
+        // 构建 v2 API 合法的请求体
+        const body: Record<string, unknown> = {};
+
+        if (payload.summary) body.summary = payload.summary;
+        if (payload.description) body.description = payload.description;
+
+        // v2 API 时间字段使用毫秒时间戳字符串
+        if (payload.due?.timestamp) {
+            body.due_at = payload.due.timestamp;
+        }
+        if (payload.start?.timestamp) {
+            body.start_at = payload.start.timestamp;
+        }
+
+        // v2 完成状态：completed_at（毫秒时间戳），空字符串 = 恢复未完成
+        if (payload.completed_at !== undefined) {
+            body.completed_at = payload.completed_at;
+        }
+
+        // members（负责人）
+        if (payload.assignee) {
+            body.members = [{
+                id: payload.assignee.id,
+                type: 'user',
+                role: 'assignee',
+            }];
+        }
+
+        Logger.info('FeishuProvider', `Updating task ${guid} (v2)`, { fields: Object.keys(body) });
 
         const response = await this.callAPI<FeishuTaskCreateResponse>(
             `/open-apis/task/v2/tasks/${guid}`,
             'PATCH',
-            payload
+            body
         );
 
         if (response.code !== 0) {
@@ -471,7 +539,23 @@ export class FeishuProvider extends APIDataSource {
                 'Content-Type': 'application/json',
             },
             body: body ? JSON.stringify(body) : undefined,
+            throw: false,
         });
+
+        if (response.status >= 400) {
+            const feishuMsg = response.json?.msg || '';
+            const feishuCode = response.json?.code || '';
+            const errMsg = feishuMsg
+                ? `Feishu API ${response.status}: code=${feishuCode}, msg=${feishuMsg}`
+                : `Feishu API ${response.status}: ${response.text?.substring(0, 200)}`;
+            Logger.error('FeishuProvider', `API error: ${method} ${path}`, {
+                status: response.status,
+                feishuCode,
+                feishuMsg,
+                requestBody: body,
+            });
+            throw new Error(errMsg);
+        }
 
         return response.json;
     }

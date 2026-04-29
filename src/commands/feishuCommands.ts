@@ -198,12 +198,12 @@ async function syncFeishuTasks(plugin: GanttCalendarPlugin): Promise<void> {
 
         Logger.info('FeishuCommands', `Sync result: ${summary}`);
 
-        // 延迟清除同步状态（让用户看到完成状态 3 秒）
-        setTimeout(() => plugin.clearSyncStatus(), 3000);
+        // 更新同步完成状态到状态栏（不清除，保持显示）
+        plugin.setSyncStatus(`✅ ${summary}`);
     } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
         Logger.error('FeishuCommands', 'Sync failed', error);
         new Notice(`同步失败: ${errorMsg}`);
-        plugin.clearSyncStatus();
+        plugin.setSyncStatus(`❌ 同步失败`);
     }
 }

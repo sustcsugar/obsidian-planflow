@@ -177,7 +177,100 @@ export class FeishuTaskSync {
         return labels[type] || type;
     }
 
+    /**
+     * 测试同步：仅同步截止时间最新的 N 条任务（默认 5 条）
+     *
+     * 用于调试，不做匹配和冲突检测，直接：
+     * - 将 OB 中截止时间最新、且未同步过的任务推送到飞书
+     * - 将飞书中截止时间最新、且未同步过的任务拉取到 OB
+     */
+    async testSync(limit: number = 5): Promise<SyncResult> {
+        const result: SyncResult = { pushed: 0, pulled: 0, conflicted: 0, skipped: 0, errors: [] };
+        const onProgress = this.options.onProgress;
+
+        try {
+            await this.state.load();
+
+            // 1. 获取双方任务
+            onProgress?.('🧪 测试同步: 获取飞书任务...');
+            const feishuTasks = await this.fetchFeishuTasks();
+
+            onProgress?.('🧪 测试同步: 获取本地任务...');
+            const obsidianTasks = await this.fetchObsidianTasks();
+
+            // 2. OB → 飞书：取截止时间最新、且未同步的任务
+            const obTasksToPush = obsidianTasks
+                .filter(t => !t.feishuGuid && t.dueDate)
+                .sort((a, b) => b.dueDate!.getTime() - a.dueDate!.getTime())
+                .slice(0, limit);
+
+            // 3. 飞书 → OB：取截止时间最新、且未同步的任务
+            const feishuTasksToPull = feishuTasks
+                .filter(t => t.due?.timestamp && !this.state.getRecord(t.guid))
+                .sort((a, b) => {
+                    const timeA = parseInt(a.due?.timestamp || '0', 10);
+                    const timeB = parseInt(b.due?.timestamp || '0', 10);
+                    return timeB - timeA;
+                })
+                .slice(0, limit);
+
+            Logger.info('FeishuTaskSync', `Test sync: push ${obTasksToPush.length}/${limit} OB tasks, pull ${feishuTasksToPull.length}/${limit} Feishu tasks`);
+
+            // 4. 推送 OB → 飞书
+            for (let i = 0; i < obTasksToPush.length; i++) {
+                const task = obTasksToPush[i];
+                onProgress?.(`🧪 测试同步: 推送 OB→飞书 ${i + 1}/${obTasksToPush.length}`);
+                try {
+                    await this.pushCreate(task, result);
+                } catch (error) {
+                    const msg = `[push-create] "${task.description}": ${error instanceof Error ? error.message : String(error)}`;
+                    result.errors.push(msg);
+                    Logger.error('FeishuTaskSync', `Test sync push failed: ${msg}`, error);
+                }
+            }
+
+            // 5. 拉取 飞书 → OB
+            for (let i = 0; i < feishuTasksToPull.length; i++) {
+                const task = feishuTasksToPull[i];
+                onProgress?.(`🧪 测试同步: 拉取 飞书→OB ${i + 1}/${feishuTasksToPull.length}`);
+                try {
+                    await this.pullCreate(task, result);
+                } catch (error) {
+                    const msg = `[pull-create] "${task.summary}": ${error instanceof Error ? error.message : String(error)}`;
+                    result.errors.push(msg);
+                    Logger.error('FeishuTaskSync', `Test sync pull failed: ${msg}`, error);
+                }
+            }
+
+            // 6. 保存状态
+            onProgress?.('🧪 测试同步: 保存状态...');
+            await this.state.save();
+
+            const parts: string[] = [];
+            if (result.pushed > 0) parts.push(`推送${result.pushed}`);
+            if (result.pulled > 0) parts.push(`拉取${result.pulled}`);
+            const summary = parts.length > 0 ? parts.join('/') : '无变更';
+            onProgress?.(`✅ 测试同步完成: ${summary}`);
+
+            Logger.info('FeishuTaskSync', `Test sync complete: pushed=${result.pushed}, pulled=${result.pulled}, errors=${result.errors.length}`);
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : String(error);
+            result.errors.push(msg);
+            Logger.error('FeishuTaskSync', 'Test sync failed', error);
+            onProgress?.('❌ 测试同步失败');
+        }
+
+        return result;
+    }
+
     // ==================== 数据获取 ====================
+
+    /**
+     * 获取默认任务格式，取用户启用的第一个格式
+     */
+    private getDefaultFormat(): 'tasks' | 'dataview' {
+        return this.options.enabledFormats?.[0] || 'tasks';
+    }
 
     private async fetchFeishuTasks(): Promise<FeishuTaskRaw[]> {
         return this.provider.fetchAllFeishuTasks();
@@ -210,7 +303,9 @@ export class FeishuTaskSync {
         if (listItems.length === 0) return [];
 
         try {
-            const content = await this.app.vault.cachedRead(file);
+            // 使用 read 而非 cachedRead，确保读取到最新文件内容
+            // （上次同步写入的 feishuGuid 可能还未刷新到缓存）
+            const content = await this.app.vault.read(file);
             return parseTasksFromFile(
                 file,
                 content,
@@ -244,6 +339,8 @@ export class FeishuTaskSync {
                 obsidianByGuid.set(task.feishuGuid, task);
             }
         }
+
+        Logger.info('FeishuTaskSync', `Match: ${feishuTasks.length} feishu, ${obsidianTasks.length} obsidian, ${obsidianByGuid.size} with GUID`);
 
         for (const feishu of feishuTasks) {
             // 1. GUID 精确匹配
@@ -448,7 +545,11 @@ export class FeishuTaskSync {
     /** Push: Obsidian → 飞书 (新建) */
     private async pushCreate(task: GCTask, result: SyncResult): Promise<void> {
         const payload = toFeishuTaskPayload(task);
-        payload.completed = toFeishuCompleted(task);
+
+        // v2 API 用 completed_at（毫秒时间戳）表示完成状态
+        if (task.completed) {
+            payload.completed_at = String(task.completionDate?.getTime() || Date.now());
+        }
 
         // 设置负责人为授权用户
         if (this.options.creatorOpenId) {
@@ -482,9 +583,9 @@ export class FeishuTaskSync {
     ): Promise<void> {
         const payload = toFeishuTaskPayload(task);
 
-        // 同步完成状态
+        // 同步完成状态：v2 API 使用 completed_at（毫秒时间戳），空字符串表示恢复未完成
         if (feishu.completed !== task.completed) {
-            payload.completed = task.completed;
+            payload.completed_at = task.completed ? String(task.completionDate?.getTime() || Date.now()) : '';
         }
 
         if (Object.keys(payload).length === 0) {
@@ -657,7 +758,7 @@ export class FeishuTaskSync {
         };
 
         // serializeTask 返回 "[ ] 内容"，需要补上 "- " 列表标记
-        const taskContent = serializeTask(this.app, mockTask, taskUpdates, 'dataview');
+        const taskContent = serializeTask(this.app, mockTask, taskUpdates, this.getDefaultFormat());
         return `- ${taskContent}`;
     }
 
@@ -696,7 +797,7 @@ export class FeishuTaskSync {
                 priority: updates.priority as any,
             };
 
-            const taskContent = serializeTask(this.app, task, taskUpdates, task.format || 'dataview');
+            const taskContent = serializeTask(this.app, task, taskUpdates, task.format || this.getDefaultFormat());
 
             // 拼接完整行：缩进 + 列表标记 + 空格 + 任务内容
             if (listMatch) {
@@ -718,7 +819,9 @@ export class FeishuTaskSync {
      * 在 push-create 后调用，将飞书返回的 GUID 写入对应任务行。
      */
     private async writeGuidToObsidian(task: GCTask, guid: string): Promise<void> {
+        Logger.info('FeishuTaskSync', `Writing GUID ${guid} to ${task.filePath}:${task.lineNumber} "${task.description?.substring(0, 30)}"`);
         await this.updateObsidianTaskLine(task, { feishuGuid: guid });
+        Logger.info('FeishuTaskSync', `GUID written successfully: ${guid}`);
     }
 
     /**

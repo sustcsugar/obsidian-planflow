@@ -16,6 +16,7 @@ export interface FeishuTaskPayload {
     start?: { timestamp?: string; is_all_day?: boolean };
     priority?: string;
     completed?: boolean;
+    completed_at?: string;  // v2 API 完成时间（毫秒时间戳字符串），空字符串表示恢复未完成
     assignee?: { id: string; type: string };
 }
 
@@ -30,7 +31,7 @@ export interface FeishuTaskPayload {
 export function toFeishuTaskPayload(task: GCTask): FeishuTaskPayload {
     const payload: FeishuTaskPayload = {};
 
-    // summary ↔ description (1:1 clean mapping)
+    // summary ↔ description (1:1 mapping, preserve original content for round-trip)
     if (task.description) {
         payload.summary = task.description;
     }

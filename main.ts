@@ -194,8 +194,10 @@ export default class GanttCalendarPlugin extends Plugin {
 		const tasks = this.taskCache.getAllTasks();
 		const total = tasks.length;
 		const incomplete = tasks.filter(t => !t.completed).length;
-		const syncDisplay = this.syncStatusText || this.formatLastSync();
+		const lastSync = this.formatLastSync();
+		const syncStatus = this.syncStatusText || '就绪';
 
-		this.statusBarText.setText(` ${incomplete}/${total}  ${syncDisplay}`);
+		// 始终并列显示：任务统计 | 同步时间 | 同步状态
+		this.statusBarText.setText(` ${incomplete}/${total} | ${lastSync} | ${syncStatus}`);
 	}
 }

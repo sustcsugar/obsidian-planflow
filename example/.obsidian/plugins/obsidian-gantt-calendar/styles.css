@@ -48,6 +48,8 @@ Author: sugar
 /* Main Container */
 .calendar-content {
 	padding: 12px;
+	height: 100%;
+	box-sizing: border-box;
 	flex: 1;
 	display: flex;
 	flex-direction: column;
@@ -56,11 +58,15 @@ Author: sugar
 }
 
 .calendar-content.gantt-mode {
-	overflow: hidden;
+	overflow: auto;
 	display: flex;
 	flex-direction: column;
 	flex: 1;
 	min-height: 0;
+}
+
+.view-content.gantt-root {
+	overflow: hidden;
 }
 
 /* Calendar Grid Layouts */
@@ -70,7 +76,7 @@ Author: sugar
 	gap: 0;
 	margin-top: 0;
 	flex: 1;
-	overflow: hidden;
+	overflow: visible;
 	min-height: 0;
 	position: relative;
 }
@@ -89,7 +95,7 @@ Author: sugar
 	display: grid;
 	grid-template-columns: repeat(7, 1fr);
 	gap: 0;
-	overflow-y: auto;
+	overflow-y: visible;
 	overflow-x: hidden;
 	flex: 1 1 auto;
 	min-height: 0;
@@ -192,8 +198,8 @@ Author: sugar
 	flex-direction: column;
 	gap: 0;
 	flex: 1;
-	overflow: hidden;
-	height: 100%;
+	overflow: visible;
+	height: auto;
 }
 
 .gc-week-view__days {
@@ -211,9 +217,9 @@ Author: sugar
 	gap: 12px;
 	max-width: 100%;
 	margin: 0;
-	height: 100%;
+	height: auto;
 	flex: 1;
-	overflow: hidden;
+	overflow-y: visible;
 	padding: 12px;
 }
 
@@ -1776,7 +1782,7 @@ Author: sugar
 .gc-week-view__tasks-column {
 	border-right: 1px solid var(--background-modifier-border);
 	padding: 8px;
-	overflow-y: auto;
+	overflow-y: visible;
 	overflow-x: hidden;
 	display: flex;
 	flex-direction: column;
@@ -1932,8 +1938,125 @@ Author: sugar
 	font-size: 12px;
 }
 
+/* ==================== Week View Timeline ==================== */
+/* 周视图时间轴模式 - 当周内有定时任务时激活 */
+/* 核心：header + 时间标尺 + 任务格全部在同一 grid 中，保证行列完美对齐 */
+.gc-week-view--timeline .gc-week-view__tasks-grid {
+	display: grid;
+	grid-template-columns: 48px repeat(7, 1fr);
+	grid-template-rows: 52px repeat(24, max-content);
+	overflow-y: visible;
+	overflow-x: hidden;
+	flex: 1 1 auto;
+	min-height: 0;
+	position: relative;
+}
+
+/* Header 占位格（第 1 列第 1 行） */
+.gc-week-view__header-spacer {
+	border-right: 1px solid var(--background-modifier-border);
+	border-bottom: 2px solid var(--background-modifier-border);
+	background-color: var(--background-primary);
+	position: sticky;
+	top: 0;
+	z-index: 5;
+}
+
+/* 时间轴模式下 header cell（sticky） */
+.gc-week-view--timeline .gc-week-view__header-cell {
+	position: sticky;
+	top: 0;
+	z-index: 5;
+	background-color: var(--background-primary);
+}
+
+/* 时间标尺格（第 1 列，第 2-25 行） */
+.gc-week-view__time-gutter-slot {
+	display: flex;
+	align-items: flex-start;
+	justify-content: flex-end;
+	padding: 2px 6px 0 0;
+	min-height: 36px;
+	border-top: 1px solid var(--background-modifier-border);
+	background-color: var(--background-primary);
+	border-right: 1px solid var(--background-modifier-border);
+}
+
+.gc-week-view__time-gutter-slot:first-of-type {
+	border-top: none;
+}
+
+.gc-week-view__time-gutter-label {
+	font-size: 11px;
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+/* 任务时间格（第 2-8 列，第 2-25 行） */
+.gc-week-view__time-slot {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 2px 4px;
+	min-height: 36px;
+	border-top: 1px solid var(--background-modifier-border);
+	border-right: 1px solid var(--background-modifier-border);
+	overflow: visible;
+	position: relative;
+}
+
+.gc-week-view__time-tasks {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.gc-week-view__row--drag-over {
+	background-color: var(--background-modifier-hover);
+	transition: background-color 0.15s ease;
+}
+
 /* ==================== Day View Sub-Components ==================== */
 /* BEM命名: gc-day-view Elements */
+
+/* 笔记区标题栏容器 */
+.gc-day-view__notes-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	flex-shrink: 0;
+}
+
+.gc-day-view__notes-header .gc-day-view__title {
+	margin: 0;
+	padding: 0;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+/* 模式切换按钮 */
+.gc-embedded-editor__mode-toggle {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	border: none;
+	background: transparent;
+	cursor: pointer;
+	border-radius: 4px;
+	color: var(--text-muted);
+	transition: color 0.15s, background-color 0.15s;
+	flex-shrink: 0;
+}
+
+.gc-embedded-editor__mode-toggle:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+
 .gc-day-view__task-list {
 	display: flex;
 	flex-direction: column;
@@ -1942,6 +2065,79 @@ Author: sugar
 	flex: 1;
 	min-height: 0;
 }
+
+/* ==================== Day View Timeline ==================== */
+.gc-day-view__timeline {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-height: 0;
+	overflow: hidden;
+}
+
+.gc-day-view__allday {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 4px 0;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.gc-day-view__allday-label {
+	font-size: 11px;
+	color: var(--text-muted);
+	padding: 2px 4px;
+	flex-shrink: 0;
+}
+
+.gc-day-view__allday-tasks {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.gc-day-view__time-grid {
+	flex: 1;
+	overflow-y: auto;
+	min-height: 0;
+}
+
+.gc-day-view__time-slot {
+	display: flex;
+	min-height: 48px;
+	border-top: 1px solid var(--background-modifier-border);
+	position: relative;
+}
+
+.gc-day-view__time-slot:first-child {
+	border-top: none;
+}
+
+.gc-day-view__time-label {
+	width: 50px;
+	flex-shrink: 0;
+	font-size: 11px;
+	color: var(--text-muted);
+	padding: 4px 6px 0 0;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+.gc-day-view__time-tasks {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 4px 0;
+	min-height: 0;
+}
+
+.gc-day-view__time-slot--drag-over {
+	background-color: var(--background-modifier-hover);
+	transition: background-color 0.15s ease;
+}
+
+
 
 .gc-day-view--horizontal .gc-day-view__section--tasks {
 	flex: 1 1 50%;
@@ -2034,6 +2230,76 @@ Author: sugar
 	font-size: 12px;
 	line-height: 1.6;
 	color: var(--text-normal);
+}
+
+/* ==================== Embedded Note Editor ==================== */
+/* 嵌入式编辑器 - 在 DayView 的笔记区域中嵌入完整的 Obsidian 编辑器 */
+
+/* 嵌入式 leaf 容器 */
+.gc-embedded-editor {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+}
+
+/* 隐藏 MarkdownView 的顶部标题栏和导航栏 */
+.gc-embedded-editor .view-header,
+.gc-embedded-editor .nav-header {
+    display: none;
+}
+
+/* 隐藏 MarkdownView 的 nav 区域 */
+.gc-embedded-editor .workspace-leaf-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* 编辑器区域填满 */
+.gc-embedded-editor .markdown-source-view,
+.gc-embedded-editor .markdown-reading-view {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+/* 移除 leaf 的默认边框和阴影 */
+.gc-embedded-editor .workspace-leaf-content[data-mode="source"] .cm-editor,
+.gc-embedded-editor .workspace-leaf-content[data-mode="preview"] .markdown-preview-view {
+    height: 100%;
+}
+
+/* 确保 CodeMirror 填满编辑区 */
+.gc-embedded-editor .cm-editor {
+    height: 100%;
+}
+
+.gc-embedded-editor .cm-scroller {
+    overflow-y: auto;
+}
+
+/* 日视图笔记区内容容器调整 */
+.gc-day-view__notes-content {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* WorkspaceSplit 容器填满 notes-content */
+.gc-day-view__notes-content .workspace-split {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* WorkspaceSplit 内的 leaf 容器填满 */
+.gc-day-view__notes-content .workspace-split .workspace-leaf {
+    flex: 1;
+    min-height: 0;
 }
 
 /* Priority badge inline */
@@ -2746,7 +3012,6 @@ Author: sugar
 /* 甘特图根容器 */
 .gc-gantt-view__root {
 	flex: 1 1 auto;
-	min-height: 500px;
 	min-width: 100%;
 	position: relative;
 	overflow: visible;
@@ -2775,10 +3040,10 @@ Author: sugar
 	grid-template-areas:
 		"corner resizer header"
 		"tasklist resizer chart";
-	grid-template-rows: 50px 1fr;
+	grid-template-rows: 50px auto;
 
 	width: 100%;
-	min-height: 400px;
+	min-width: 0;
 	gap: 0;
 	position: relative;
 }
@@ -2786,9 +3051,6 @@ Author: sugar
 /* 左上角空白区域（sticky） */
 .gc-gantt-view__corner {
 	grid-area: corner;
-	position: sticky;
-	top: 8px;
-	z-index: 50;
 	height: 50px;
 	overflow: hidden;
 	border-right: 1px solid var(--background-modifier-border);
@@ -2802,12 +3064,9 @@ Author: sugar
 	display: block;
 }
 
-/* 顶部时间轴容器（sticky，可水平滚动） */
+/* 顶部时间轴容器 */
 .gc-gantt-view__header {
 	grid-area: header;
-	position: sticky;
-	top: 8px;
-	z-index: 50;
 	height: 50px;
 	overflow-x: auto;
 	overflow-y: hidden;
@@ -2831,11 +3090,11 @@ Author: sugar
 /* 左侧任务列表容器 */
 .gc-gantt-view__tasklist {
 	grid-area: tasklist;
-	overflow-x: hidden;
-	overflow-y: auto;
+	overflow: hidden;
+	min-width: 0;
+	min-height: 0;
 	border-right: 1px solid var(--background-modifier-border);
 	background-color: var(--background-primary);
-	min-height: 0;
 	/* 隐藏滚动条但保留滚动功能 */
 	scrollbar-width: none; /* Firefox */
 	-ms-overflow-style: none; /* IE 10+ */
@@ -2847,14 +3106,17 @@ Author: sugar
 
 .gc-gantt-view__tasklist-svg {
 	display: block;
+	overflow: hidden;
 }
 
-/* 右侧甘特图容器（双向滚动） */
+/* 右侧甘特图容器（水平滚动，不撑开 grid） */
 .gc-gantt-view__chart {
 	grid-area: chart;
-	overflow: auto;
-	background-color: var(--background-primary);
+	overflow-x: auto;
+	overflow-y: hidden;
+	min-width: 0;
 	min-height: 0;
+	background-color: var(--background-primary);
 }
 
 .gc-gantt-view__chart::-webkit-scrollbar {
@@ -2918,7 +3180,6 @@ Author: sugar
 /* 甘特图根容器 */
 .gc-gantt-view__root {
 	flex: 1 1 auto;
-	min-height: 500px;
 	min-width: 100%;
 	position: relative;
 	overflow: visible;
@@ -2976,24 +3237,15 @@ Author: sugar
 
 .gc-gantt-view__tasklist-container {
 	grid-area: tasklist;
-	overflow-x: hidden;
-	overflow-y: auto;
+	overflow: visible;
 	border-right: 1px solid var(--background-modifier-border);
 	background-color: var(--background-primary);
-	min-height: 0;
-	scrollbar-width: none;
-	-ms-overflow-style: none;
-}
-
-.gc-gantt-view__tasklist-container::-webkit-scrollbar {
-	display: none;
 }
 
 .gc-gantt-view__chart-container {
 	grid-area: chart;
-	overflow: auto;
+	overflow: visible;
 	background-color: var(--background-primary);
-	min-height: 0;
 }
 
 /* ============================================
@@ -3170,7 +3422,6 @@ Author: sugar
 /* 响应式适配 */
 @media (max-width: 768px) {
 	.gc-gantt-view__root {
-		min-height: 300px;
 		padding: 8px;
 	}
 
@@ -3312,4 +3563,369 @@ Author: sugar
 .gc-gantt-view__row-highlight {
 	fill: var(--background-modifier-hover) !important;
 	opacity: 1 !important;
+}
+
+/* 甘特图 drop 目标高亮 */
+.gc-gantt-view__chart--drop-target {
+	outline: 2px dashed var(--interactive-accent);
+	outline-offset: -2px;
+	background-color: var(--background-modifier-hover);
+}
+
+/* ============================================
+   侧边栏视图样式
+   ============================================ */
+
+.gc-sidebar {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	overflow: hidden;
+}
+
+/* Tab 切换栏 */
+.gc-sidebar__tab-bar {
+	display: flex;
+	gap: 2px;
+	padding: 8px 8px 0;
+	border-bottom: 1px solid var(--background-modifier-border);
+	flex-shrink: 0;
+}
+
+.gc-sidebar__tab-btn {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 6px 12px;
+	font-size: 12px;
+	color: var(--text-muted);
+	cursor: pointer;
+	border-radius: 6px 6px 0 0;
+	transition: color 0.15s, background-color 0.15s;
+	white-space: nowrap;
+}
+
+.gc-sidebar__tab-btn:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+
+.gc-sidebar__tab-btn--active {
+	color: var(--text-accent);
+	background-color: var(--background-secondary);
+	font-weight: 600;
+}
+
+/* 内容区域 */
+.gc-sidebar__content {
+	flex: 1;
+	overflow-y: auto;
+	padding: 8px;
+}
+
+/* 搜索框 */
+.gc-sidebar__search-input {
+	margin-bottom: 8px;
+}
+
+.gc-sidebar__search-input input {
+	width: 100%;
+	padding: 6px 10px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-size: 13px;
+	outline: none;
+}
+
+.gc-sidebar__search-input input:focus {
+	border-color: var(--interactive-accent);
+}
+
+.gc-sidebar__search-input input::placeholder {
+	color: var(--text-muted);
+}
+
+/* 筛选栏 */
+.gc-sidebar__filter-bar {
+	display: flex;
+	gap: 4px;
+	margin-bottom: 8px;
+	position: relative;
+}
+
+.gc-sidebar__filter-bar .clickable-icon {
+	padding: 4px;
+	border-radius: 4px;
+}
+
+.gc-sidebar__filter-bar .has-active-filter {
+	color: var(--interactive-accent);
+	background-color: var(--background-modifier-hover);
+}
+
+/* 下拉菜单 */
+.sidebar-dropdown {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	z-index: 100;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	padding: 4px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+	min-width: 120px;
+}
+
+.sidebar-dropdown-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 8px;
+	cursor: pointer;
+	border-radius: 4px;
+	font-size: 13px;
+}
+
+.sidebar-dropdown-item:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.sidebar-dropdown-item.is-selected {
+	background-color: var(--background-modifier-active-hover);
+	color: var(--text-accent);
+}
+
+.sidebar-dropdown-item button.is-selected {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border-radius: 4px;
+}
+
+/* 任务列表 */
+.gc-sidebar__task-list {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+/* 任务项在侧边栏中更紧凑 */
+.gc-sidebar__task-item {
+	padding: 6px 8px;
+	border-radius: 6px;
+	cursor: grab;
+}
+
+.gc-sidebar__task-item:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+/* 空状态 */
+.gc-sidebar__empty-state {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 24px 12px;
+	color: var(--text-muted);
+	font-size: 13px;
+}
+
+/* 任务卡片侧边栏修饰符 */
+.gc-task-card--sidebar {
+	padding: 6px 8px;
+	font-size: 12px;
+	border-radius: 6px;
+	border: 1px solid transparent;
+	transition: background-color 0.15s, border-color 0.15s;
+}
+
+.gc-task-card--sidebar:hover {
+	background-color: var(--background-modifier-hover);
+	border-color: var(--background-modifier-border);
+}
+
+.gc-task-card--sidebar .gc-task-card__text {
+	font-size: 12px;
+	line-height: 1.4;
+}
+
+.gc-task-card--sidebar .gc-task-card__time-badge {
+	font-size: 10px;
+	padding: 1px 4px;
+}
+
+/* ============================================
+   今日时间线样式
+   ============================================ */
+
+.gc-sidebar__timeline-header {
+	padding: 8px 4px;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--text-normal);
+	margin-bottom: 8px;
+}
+
+/* 全天区域 */
+.gc-sidebar__timeline-allday {
+	margin-bottom: 12px;
+}
+
+.gc-sidebar__timeline-allday-label {
+	font-size: 11px;
+	color: var(--text-muted);
+	text-transform: uppercase;
+	font-weight: 600;
+	margin-bottom: 4px;
+	padding-left: 4px;
+}
+
+.gc-sidebar__timeline-allday-tasks {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+/* 时间线 */
+.gc-sidebar__timeline {
+	display: flex;
+	flex-direction: column;
+	position: relative;
+}
+
+.gc-sidebar__timeline-time-slot {
+	display: flex;
+	gap: 8px;
+	min-height: 40px;
+	border-top: 1px solid var(--background-modifier-border);
+	padding: 4px 0;
+	position: relative;
+}
+
+.gc-sidebar__timeline-time-slot.is-current-hour {
+	background-color: var(--background-modifier-hover);
+}
+
+.gc-sidebar__timeline-time-label {
+	width: 44px;
+	flex-shrink: 0;
+	font-size: 11px;
+	color: var(--text-muted);
+	text-align: right;
+	padding-top: 2px;
+}
+
+.gc-sidebar__timeline-time-tasks {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+}
+
+/* 当前时间指示线 */
+.gc-sidebar__timeline-current-time {
+	position: absolute;
+	left: 44px;
+	right: 0;
+	height: 2px;
+	background-color: var(--interactive-accent);
+	z-index: 5;
+	pointer-events: none;
+}
+
+.gc-sidebar__timeline-current-time::before {
+	content: '';
+	position: absolute;
+	left: -5px;
+	top: -3px;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background-color: var(--interactive-accent);
+}
+
+/* 时间格拖放高亮 */
+.gc-sidebar__timeline-time-slot.gc-sidebar__time-slot--drag-over {
+	background-color: var(--background-modifier-hover);
+	outline: 2px dashed var(--interactive-accent);
+	outline-offset: -2px;
+}
+
+/* 全天区域拖放高亮 */
+.gc-sidebar__timeline-allday.gc-sidebar__all-day--drag-over {
+	background-color: var(--background-modifier-hover);
+	outline: 2px dashed var(--interactive-accent);
+	outline-offset: -2px;
+	border-radius: 4px;
+}
+
+/* 空时间格 "+" 创建按钮 */
+.gc-sidebar__timeline-slot-create {
+	flex: 1;
+	min-height: 30px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	border-radius: 4px;
+	transition: background-color 0.15s;
+}
+
+.gc-sidebar__timeline-slot-create:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.gc-sidebar__timeline-slot-create .lucide-plus {
+	width: 16px;
+	height: 16px;
+	color: var(--text-muted);
+	opacity: 0.6;
+}
+
+.gc-sidebar__timeline-slot-create:hover .lucide-plus {
+	opacity: 1;
+	color: var(--interactive-accent);
+}
+
+/* 日视图/周视图 空时间格 "+" 创建按钮 */
+.gc-day-view__slot-create,
+.gc-week-view__slot-create {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	border-radius: 4px;
+	transition: background-color 0.15s;
+}
+
+.gc-day-view__slot-create:hover,
+.gc-week-view__slot-create:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.gc-day-view__slot-create .lucide-plus,
+.gc-week-view__slot-create .lucide-plus {
+	width: 18px;
+	height: 18px;
+	color: var(--text-muted);
+	opacity: 0;
+	transition: opacity 0.15s, color 0.15s;
+}
+
+.gc-day-view__slot-create:hover .lucide-plus,
+.gc-week-view__slot-create:hover .lucide-plus {
+	opacity: 0.7;
+	color: var(--interactive-accent);
+}
+
+/* Status bar icon */
+.gc-status-bar-icon {
+	display: inline-flex;
+	vertical-align: middle;
+	margin-right: 4px;
 }
