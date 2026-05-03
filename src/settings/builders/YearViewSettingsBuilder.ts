@@ -59,23 +59,20 @@ export class YearViewSettingsBuilder extends BaseBuilder {
 						}))
 			);
 
-			// 热力图色卡选择（平铺单选色卡）
+			// 热力图色卡选择
 			if (this.plugin.settings.yearHeatmapEnabled) {
 				addSetting(setting => {
-					setting.nameEl.remove();
-					setting.descEl.remove();
-					setting.controlEl.remove();
-					setting.infoEl.addClass('gc-settings-info-compact');
-
-					const heatmapPicker = new HeatmapPalettePicker({
-						container: setting.settingEl,
+					setting.setName('热力图配色')
+						.setDesc('选择任务热力图的颜色梯度');
+					setting.controlEl.empty();
+					new HeatmapPalettePicker({
+						container: setting.controlEl,
 						currentPalette: this.plugin.settings.yearHeatmapPalette,
 						onPaletteChange: async (paletteKey) => {
 							this.plugin.settings.yearHeatmapPalette = paletteKey;
 							await this.saveAndRefreshViews();
-						}
-					});
-					heatmapPicker.render();
+						},
+					}).render();
 				});
 
 				// 热力图3D效果选择

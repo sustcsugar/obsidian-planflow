@@ -17,7 +17,6 @@ export { YearViewSettingsBuilder } from './builders/YearViewSettingsBuilder';
 export { TaskStatusSettingsBuilder } from './builders/TaskStatusSettingsBuilder';
 
 // 可选：导出组件（供外部扩展使用）
-export { ColorPicker } from './components/ColorPicker';
 export { MacaronColorPicker } from './components/MacaronColorPicker';
 export { HeatmapPalettePicker } from './components/HeatmapPalettePicker';
 export { TaskStatusCard } from './components/TaskStatusCard';

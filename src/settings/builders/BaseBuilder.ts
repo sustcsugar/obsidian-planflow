@@ -1,11 +1,6 @@
 import { Setting, SettingGroup } from 'obsidian';
 import type GanttCalendarPlugin from '../../../main';
-import type { BuilderConfig, GanttCalendarSettings } from '../types';
-
-/**
- * 视图类型（用于卡片显示控制 toggle）
- */
-type ViewType = 'week' | 'month' | 'sidebar';
+import type { BuilderConfig } from '../types';
 
 /**
  * 设置构建器基类
@@ -85,62 +80,6 @@ export abstract class BaseBuilder {
 		this.plugin.refreshCalendarViews();
 		if (this.onRefreshSettings) {
 			this.onRefreshSettings();
-		}
-	}
-
-	/**
-	 * 批量添加卡片显示控制 toggle（复选框/标签/优先级/Ticktick）
-	 * 用于 WeekView、MonthView、SidebarView 消除重复代码
-	 */
-	protected addCardDisplayToggles(
-		addSetting: (cb: (setting: Setting) => void) => void,
-		viewType: ViewType
-	): void {
-		const viewLabels: Record<ViewType, string> = {
-			week: '周视图', month: '月视图', sidebar: '侧边栏'
-		};
-		const label = viewLabels[viewType];
-
-		const settingKeyMap: Record<ViewType, Record<string, keyof GanttCalendarSettings>> = {
-			week: {
-				checkbox: 'weekViewShowCheckbox',
-				tags: 'weekViewShowTags',
-				priority: 'weekViewShowPriority',
-				ticktick: 'weekViewShowTicktick',
-			},
-			month: {
-				checkbox: 'monthViewShowCheckbox',
-				tags: 'monthViewShowTags',
-				priority: 'monthViewShowPriority',
-				ticktick: 'monthViewShowTicktick',
-			},
-			sidebar: {
-				checkbox: 'sidebarShowCheckbox',
-				tags: 'sidebarShowTags',
-				priority: 'sidebarShowPriority',
-				ticktick: 'sidebarShowTicktick',
-			},
-		};
-		const keys = settingKeyMap[viewType];
-
-		const toggles = [
-			{ key: keys.checkbox, name: '显示复选框', desc: `在${label}任务卡片中显示任务复选框` },
-			{ key: keys.tags, name: '显示任务标签', desc: `在${label}任务卡片中显示任务标签` },
-			{ key: keys.priority, name: '显示任务优先级', desc: `在${label}任务卡片中显示任务优先级图标` },
-			{ key: keys.ticktick, name: '显示 Ticktick', desc: `在${label}任务卡片中显示 %%content%% ticktick 文本` },
-		];
-
-		for (const toggle of toggles) {
-			addSetting(setting =>
-				setting.setName(toggle.name)
-					.setDesc(toggle.desc)
-					.addToggle(t => t
-						.setValue(!!(this.plugin.settings as unknown as Record<string, unknown>)[toggle.key])
-						.onChange(async (value) => {
-							(this.plugin.settings as unknown as Record<string, unknown>)[toggle.key] = value;
-							await this.saveAndRefreshViews();
-						}))
-			);
 		}
 	}
 }

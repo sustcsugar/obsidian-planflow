@@ -57,6 +57,17 @@ export const BLOCKS = {
 	/** 侧边栏视图 */
 	SIDEBAR: 'sidebar',
 
+	/** 设置页卡片元素开关 */
+	SETTINGS_CARD_CHIP: 'settings-card-chip',
+
+	/** 设置页任务状态卡片 */
+	SETTINGS_STATUS_CARD: 'settings-status-card',
+
+
+	/** 设置页添加状态弹窗 */
+	SETTINGS_STATUS_MODAL: 'settings-status-modal',
+	/** 设置页热力图色卡选择器 */
+	SETTINGS_HEATMAP_CHIP: 'settings-heatmap-chip',
 } as const;
 
 /**
@@ -723,6 +734,51 @@ export const SidebarClasses = {
 };
 
 /**
+ * 设置页卡片元素开关类名常量
+ */
+export const SettingsCardChipClasses = {
+	block: bem(BLOCKS.SETTINGS_CARD_CHIP),
+
+	elements: {
+		chipRow: bem(BLOCKS.SETTINGS_CARD_CHIP, 'chip-row'),
+		chip: bem(BLOCKS.SETTINGS_CARD_CHIP, 'chip'),
+	},
+
+	modifiers: {
+		chipActive: bem(BLOCKS.SETTINGS_CARD_CHIP, 'chip', 'active'),
+	},
+};
+
+/**
+ * 设置页任务状态卡片类名常量
+ */
+export const SettingsStatusCardClasses = {
+	block: bem(BLOCKS.SETTINGS_STATUS_CARD),
+
+	elements: {
+		grid: bem(BLOCKS.SETTINGS_STATUS_CARD, 'grid'),
+		card: bem(BLOCKS.SETTINGS_STATUS_CARD, 'card'),
+		header: bem(BLOCKS.SETTINGS_STATUS_CARD, 'header'),
+		dot: bem(BLOCKS.SETTINGS_STATUS_CARD, 'dot'),
+		key: bem(BLOCKS.SETTINGS_STATUS_CARD, 'key'),
+		deleteBtn: bem(BLOCKS.SETTINGS_STATUS_CARD, 'delete-btn'),
+		body: bem(BLOCKS.SETTINGS_STATUS_CARD, 'body'),
+		themeSection: bem(BLOCKS.SETTINGS_STATUS_CARD, 'theme-section'),
+		themeLabel: bem(BLOCKS.SETTINGS_STATUS_CARD, 'theme-label'),
+		divider: bem(BLOCKS.SETTINGS_STATUS_CARD, 'divider'),
+		colorRow: bem(BLOCKS.SETTINGS_STATUS_CARD, 'color-row'),
+		colorField: bem(BLOCKS.SETTINGS_STATUS_CARD, 'color-field'),
+		colorLabel: bem(BLOCKS.SETTINGS_STATUS_CARD, 'color-label'),
+		colorLabelText: bem(BLOCKS.SETTINGS_STATUS_CARD, 'color-label-text'),
+		swatchWrapper: bem(BLOCKS.SETTINGS_STATUS_CARD, 'swatch-wrapper'),
+		hiddenInput: bem(BLOCKS.SETTINGS_STATUS_CARD, 'hidden-input'),
+		swatch: bem(BLOCKS.SETTINGS_STATUS_CARD, 'swatch'),
+		macaron: bem(BLOCKS.SETTINGS_STATUS_CARD, 'macaron-grid'),
+		macaronSwatch: bem(BLOCKS.SETTINGS_STATUS_CARD, 'macaron-swatch'),
+	},
+};
+
+/**
  * 获取带修饰符的完整类名
  * @param baseClass 基础类名
  * @param modifiers 修饰符列表
@@ -737,3 +793,52 @@ export function withModifiers(baseClass: string, ...modifiers: (string | undefin
 	}
 	return classes.join(' ');
 }
+
+/**
+ * 设置页添加状态弹窗类名常量
+ */
+export const SettingsStatusModalClasses = {
+	block: bem(BLOCKS.SETTINGS_STATUS_MODAL),
+
+	elements: {
+		title: bem(BLOCKS.SETTINGS_STATUS_MODAL, 'title'),
+		field: bem(BLOCKS.SETTINGS_STATUS_MODAL, 'field'),
+		label: bem(BLOCKS.SETTINGS_STATUS_MODAL, 'label'),
+		input: bem(BLOCKS.SETTINGS_STATUS_MODAL, 'input'),
+		textarea: bem(BLOCKS.SETTINGS_STATUS_MODAL, 'textarea'),
+		hint: bem(BLOCKS.SETTINGS_STATUS_MODAL, 'hint'),
+		error: bem(BLOCKS.SETTINGS_STATUS_MODAL, 'error'),
+		themeSection: bem(BLOCKS.SETTINGS_STATUS_MODAL, 'theme-section'),
+		themeHeader: bem(BLOCKS.SETTINGS_STATUS_MODAL, 'theme-header'),
+		colorRow: bem(BLOCKS.SETTINGS_STATUS_MODAL, 'color-row'),
+		colorField: bem(BLOCKS.SETTINGS_STATUS_MODAL, 'color-field'),
+		colorLabel: bem(BLOCKS.SETTINGS_STATUS_MODAL, 'color-label'),
+		swatchWrapper: bem(BLOCKS.SETTINGS_STATUS_MODAL, 'swatch-wrapper'),
+		hiddenInput: bem(BLOCKS.SETTINGS_STATUS_MODAL, 'hidden-input'),
+		swatch: bem(BLOCKS.SETTINGS_STATUS_MODAL, 'swatch'),
+		footer: bem(BLOCKS.SETTINGS_STATUS_MODAL, 'footer'),
+		btn: bem(BLOCKS.SETTINGS_STATUS_MODAL, 'btn'),
+	},
+
+	modifiers: {
+		btnPrimary: bem(BLOCKS.SETTINGS_STATUS_MODAL, 'btn', 'primary'),
+	},
+};
+
+/**
+ * 设置页热力图色卡选择器类名常量
+ */
+export const SettingsHeatmapChipClasses = {
+	block: bem(BLOCKS.SETTINGS_HEATMAP_CHIP),
+
+	elements: {
+		row: bem(BLOCKS.SETTINGS_HEATMAP_CHIP, 'row'),
+		chip: bem(BLOCKS.SETTINGS_HEATMAP_CHIP, 'chip'),
+		preview: bem(BLOCKS.SETTINGS_HEATMAP_CHIP, 'preview'),
+		label: bem(BLOCKS.SETTINGS_HEATMAP_CHIP, 'label'),
+	},
+
+	modifiers: {
+		active: bem(BLOCKS.SETTINGS_HEATMAP_CHIP, 'chip', 'active'),
+	},
+};

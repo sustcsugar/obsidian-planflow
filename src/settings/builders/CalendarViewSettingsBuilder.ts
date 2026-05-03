@@ -42,9 +42,9 @@ export class CalendarViewSettingsBuilder extends BaseBuilder {
 						}))
 			);
 
-			// 一周开始于
+			// 一周开始日
 			addSetting(setting => {
-				setting.setName('一周开始于:')
+				setting.setName('一周开始日')
 					.setDesc('选择一周的起始日')
 					.addDropdown(drop => {
 						drop.addOptions({ 'monday': '周一', 'sunday': '周日' });
@@ -87,34 +87,6 @@ export class CalendarViewSettingsBuilder extends BaseBuilder {
 						.setValue(this.plugin.settings.showFestivals)
 						.onChange(async (value) => {
 							this.plugin.settings.showFestivals = value;
-							await this.saveAndRefreshViews();
-						}))
-			);
-
-			// 年视图农历字号
-			addSetting(setting =>
-				setting.setName('年视图农历字号')
-					.setDesc('设置年视图中农历文字的大小（8-18px）')
-					.addSlider(slider => slider
-						.setLimits(8, 18, 1)
-						.setValue(this.plugin.settings.yearLunarFontSize)
-						.setDynamicTooltip()
-						.onChange(async (value) => {
-							this.plugin.settings.yearLunarFontSize = value;
-							await this.saveAndRefreshViews();
-						}))
-			);
-
-			// 月视图农历字号
-			addSetting(setting =>
-				setting.setName('月视图农历字号')
-					.setDesc('设置月视图中农历文字的大小（8-18px）')
-					.addSlider(slider => slider
-						.setLimits(8, 18, 1)
-						.setValue(this.plugin.settings.monthLunarFontSize)
-						.setDynamicTooltip()
-						.onChange(async (value) => {
-							this.plugin.settings.monthLunarFontSize = value;
 							await this.saveAndRefreshViews();
 						}))
 			);

@@ -995,6 +995,9 @@ export abstract class BaseTaskModal extends Modal {
 	 * 添加弹窗样式
 	 */
 	protected addStyles(): void {
+		if (this.styleEl && this.styleEl.parentNode) {
+			return;
+		}
 		this.styleEl = document.createElement('style');
 		this.styleEl.textContent = `
 			.${EditTaskModalClasses.block} {

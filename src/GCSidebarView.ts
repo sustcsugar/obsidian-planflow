@@ -62,7 +62,7 @@ export class GCSidebarView extends ItemView {
 	}
 
 	private render(): void {
-		const container = this.containerEl.children[1];
+		const container = this.contentEl;
 		container.empty();
 		container.addClass(SidebarClasses.block);
 

@@ -7,6 +7,7 @@
 
 import { App, TFile } from 'obsidian';
 import { GCTask } from '../types';
+import { determineTaskFormat } from './taskUpdater';
 import { serializeTask, TaskUpdates } from './taskSerializer';
 import { updateTaskCompletion } from './taskUpdater';
 import { parseRepeatRule, getNextOccurrence } from './recurrenceCalculator';
@@ -146,30 +147,4 @@ function advanceDateInUpdates(
         const offset = sourceTask.dueDate.getTime() - sourceBaseDate.getTime();
         updates.dueDate = new Date(nextOccurrence.getTime() + offset);
     }
-}
-
-/**
- * 确定任务使用的格式
- * （从 taskUpdater.ts 复制，因为原函数不是 export 的）
- */
-function determineTaskFormat(
-    task: GCTask,
-    taskLine: string,
-    enabledFormats: string[]
-): 'dataview' | 'tasks' {
-    let formatToUse: 'dataview' | 'tasks' | undefined = task.format;
-    if (!formatToUse) {
-        if (/\[(priority|created|start|scheduled|due|cancelled|completion)::\s*[^\]]+\]/.test(taskLine)) {
-            formatToUse = 'dataview';
-        } else if (/([➕🛫⏳📅❌✅])\s*\d{4}-\d{2}-\d{2}/.test(taskLine)) {
-            formatToUse = 'tasks';
-        } else if (enabledFormats.includes('dataview') && enabledFormats.includes('tasks')) {
-            formatToUse = taskLine.includes('[') ? 'dataview' : 'tasks';
-        } else if (enabledFormats.includes('dataview')) {
-            formatToUse = 'dataview';
-        } else {
-            formatToUse = 'tasks';
-        }
-    }
-    return formatToUse;
 }

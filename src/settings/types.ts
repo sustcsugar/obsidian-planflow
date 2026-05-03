@@ -180,18 +180,6 @@ export interface ColorSettingConfig {
 }
 
 /**
- * 颜色选择器配置接口
- */
-export interface ColorPickerConfig {
-	container: HTMLElement;
-	name: string;
-	description: string;
-	currentColor: string;
-	presetColors: string[];
-	onColorChange: (color: string) => Promise<void> | void;
-}
-
-/**
  * 热力图色卡配置接口
  */
 export interface HeatmapPalette {

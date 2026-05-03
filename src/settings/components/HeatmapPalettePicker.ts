@@ -1,5 +1,5 @@
 import { HEATMAP_PALETTES } from '../constants';
-import type { HeatmapPalette } from '../types';
+import { SettingsHeatmapChipClasses } from '../../utils/bem';
 
 /**
  * 热力图色卡选择器配置接口
@@ -12,49 +12,54 @@ export interface HeatmapPalettePickerConfig {
 
 /**
  * 热力图色卡选择器组件
- * 提供热力图配色方案的平铺选择界面
+ * Apple pill-style chips with gradient preview
  */
 export class HeatmapPalettePicker {
 	private config: HeatmapPalettePickerConfig;
-	private listDiv: HTMLElement;
 
 	constructor(config: HeatmapPalettePickerConfig) {
 		this.config = config;
 	}
 
-	/**
-	 * 渲染热力图色卡选择器
-	 */
 	render(): void {
-		const settingDiv = this.config.container.createDiv('heatmap-palette-setting');
-		const labelDiv = settingDiv.createDiv('heatmap-palette-label');
-		labelDiv.createEl('div', { text: '热力图配色方案', cls: 'heatmap-palette-name' });
-		labelDiv.createEl('div', { text: '选择任务热力图的颜色梯度', cls: 'heatmap-palette-desc' });
-
-		this.listDiv = settingDiv.createDiv('heatmap-palette-list');
+		const cls = SettingsHeatmapChipClasses;
+		const row = this.config.container.createDiv(cls.elements.row);
 
 		Object.values(HEATMAP_PALETTES).forEach((palette) => {
-			const option = this.listDiv.createDiv('heatmap-palette-option');
-			option.setAttr('data-palette', palette.key);
+			const chip = row.createDiv(cls.elements.chip);
+			chip.setAttribute('role', 'radio');
+			chip.setAttribute('aria-checked', String(this.config.currentPalette === palette.key));
+			chip.setAttribute('aria-label', palette.label);
+			chip.setAttribute('tabindex', '0');
 
-			const bars = option.createDiv('heatmap-palette-bars');
-			palette.colors.forEach(c => {
-				const bar = bars.createDiv('heatmap-palette-bar');
-				(bar as HTMLElement).style.backgroundColor = c;
-			});
-
-			option.createEl('span', { text: palette.label, cls: 'heatmap-palette-label-text' });
-
-			// 初始选中态
 			if (this.config.currentPalette === palette.key) {
-				(option as HTMLElement).classList.add('selected');
+				chip.addClass(cls.modifiers.active);
 			}
 
-			option.addEventListener('click', async () => {
+			// Gradient preview bar
+			const preview = chip.createDiv(cls.elements.preview);
+			const gradient = palette.colors.join(', ');
+			preview.style.background = `linear-gradient(to right, ${gradient})`;
+
+			// Label
+			chip.createSpan(cls.elements.label).setText(palette.label);
+
+			const select = async () => {
+				Array.from(row.children).forEach(el => {
+					(el as HTMLElement).removeClass(cls.modifiers.active);
+					(el as HTMLElement).setAttribute('aria-checked', 'false');
+				});
+				chip.addClass(cls.modifiers.active);
+				chip.setAttribute('aria-checked', 'true');
 				await this.config.onPaletteChange(palette.key);
-				// 选中态更新
-				Array.from(this.listDiv.children).forEach(el => el.classList.remove('selected'));
-				(option as HTMLElement).classList.add('selected');
+			};
+
+			chip.addEventListener('click', select);
+			chip.addEventListener('keydown', (e) => {
+				if (e.key === 'Enter' || e.key === ' ') {
+					e.preventDefault();
+					select();
+				}
 			});
 		});
 	}

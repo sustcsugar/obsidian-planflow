@@ -20,9 +20,9 @@ export class GanttViewSettingsBuilder extends BaseBuilder {
 				}
 			};
 
-			// 开始时间字段
+			// 起始字段
 			addSetting(setting =>
-				setting.setName('甘特条开始时间字段')
+				setting.setName('甘特图起始字段')
 					.setDesc('选择用于确定甘特条开始位置的任务时间字段')
 					.addDropdown(drop => drop
 						.addOptions({
@@ -40,9 +40,9 @@ export class GanttViewSettingsBuilder extends BaseBuilder {
 						}))
 			);
 
-			// 结束时间字段
+			// 结束字段
 			addSetting(setting =>
-				setting.setName('甘特条结束时间字段')
+				setting.setName('甘特图结束字段')
 					.setDesc('选择用于确定甘特条结束位置的任务时间字段')
 					.addDropdown(drop => drop
 						.addOptions({

@@ -7,7 +7,7 @@ import { Logger } from '../utils/logger';
 /**
  * 确定任务使用的格式
  */
-function determineTaskFormat(
+export function determineTaskFormat(
 	task: GCTask,
 	taskLine: string,
 	enabledFormats: string[]

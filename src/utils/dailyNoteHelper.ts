@@ -4,12 +4,13 @@
  * 处理 Daily Note 的检测、创建和任务插入逻辑
  */
 
-import { App, Notice, Modal, TFile, TFolder } from 'obsidian';
+import { App, Notice, TFile, TFolder } from 'obsidian';
 import type { GanttCalendarSettings } from '../settings';
 import { formatDate } from '../dateUtils/dateUtilsIndex';
 import { Logger } from './logger';
 import type { DailyNoteIndex } from './dailyNoteSettingsBridge';
 import { getDailyNote as getDailyNoteFromIndex, createDailyNote } from 'obsidian-daily-notes-interface';
+import { showConfirmDialog } from '../modals/ConfirmModal';
 
 /**
  * 搜索结果接口
@@ -112,11 +113,10 @@ export async function createTaskInDailyNote(
 
 		if (!file) {
 			// 弹出确认对话框
-			const confirmed = await new Promise<boolean>((resolve) => {
-				new ConfirmCreateModal(app, async (confirmed) => {
-					resolve(confirmed);
-				}).open();
-			});
+			const confirmed = await showConfirmDialog(
+				app, 'Daily Note 不存在', '当天的 Daily Note 尚未创建，是否现在创建？',
+				{ confirmText: '创建', cancelText: '取消' }
+			);
 			if (!confirmed) {
 				new Notice('已取消创建任务');
 				return;
@@ -160,11 +160,10 @@ async function handleMissingDailyNote(
 	settings: GanttCalendarSettings
 ): Promise<void> {
 	// 弹出确认对话框
-	const confirmed = await new Promise<boolean>((resolve) => {
-		new ConfirmCreateModal(app, async (confirmed) => {
-			resolve(confirmed);
-		}).open();
-	});
+	const confirmed = await showConfirmDialog(
+		app, 'Daily Note 不存在', '当天的 Daily Note 尚未创建，是否现在创建？',
+		{ confirmText: '创建', cancelText: '取消' }
+	);
 
 	if (!confirmed) {
 		new Notice('已取消创建任务');
@@ -445,52 +444,4 @@ function findLastContentLineIndex(lines: string[], startIdx: number): number {
 	}
 
 	return lastContentIdx;
-}
-
-/**
- * 确认创建弹窗
- */
-class ConfirmCreateModal extends Modal {
-	private callback: (confirmed: boolean) => void;
-
-	constructor(app: App, callback: (confirmed: boolean) => void) {
-		super(app);
-		this.callback = callback;
-	}
-
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.createEl('h2', { text: 'Daily Note 不存在' });
-
-		const desc = contentEl.createEl('p', {
-			text: '当天的 Daily Note 尚未创建，是否现在创建？'
-		});
-
-		const buttonContainer = contentEl.createDiv({
-			cls: 'modal-button-container'
-		});
-
-		const cancelButton = buttonContainer.createEl('button', {
-			text: '取消',
-			cls: 'mod-cancel'
-		});
-		cancelButton.onclick = () => {
-			this.callback(false);
-			this.close();
-		};
-
-		const confirmButton = buttonContainer.createEl('button', {
-			text: '创建',
-			cls: 'mod-confirmed'
-		});
-		confirmButton.onclick = () => {
-			this.callback(true);
-			this.close();
-		};
-	}
-
-	onClose() {
-		const { contentEl } = this;
-		contentEl.empty();
-	}
 }

@@ -230,6 +230,10 @@ export class TaskStore {
 	 * 清空存储
 	 */
 	clear(): void {
+		if (this.updateDebounceTimer !== null) {
+			clearTimeout(this.updateDebounceTimer);
+			this.updateDebounceTimer = null;
+		}
 		// 销毁数据源，移除所有事件监听器
 		this.markdownSource.destroy();
 		this.repository.clear();

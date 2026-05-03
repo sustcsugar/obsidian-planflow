@@ -1,4 +1,5 @@
 import { Setting, SettingGroup, Notice, requestUrl } from 'obsidian';
+import { showConfirmDialog } from '../../modals/ConfirmModal';
 import { BaseBuilder } from './BaseBuilder';
 import type { BuilderConfig } from '../types';
 import { FeishuOAuth } from '../../data-layer/sources/api/providers/feishu/FeishuOAuth';
@@ -138,6 +139,18 @@ export class SyncSettingsBuilder extends BaseBuilder {
 						.setClass('mod-cta')
 						.setDisabled(!syncConfig.api?.tasklistGuid)
 						.onClick(async () => {
+							const confirmed = await showConfirmDialog(
+								this.plugin.app,
+								'立即同步',
+								'即将执行全量双向同步：\n\n' +
+								'• Obsidian → 飞书：推送所有未同步的本地任务\n' +
+								'• 飞书 → Obsidian：拉取所有未同步的远程任务\n' +
+								'• 已同步的任务将根据变更情况进行更新\n' +
+								'• 冲突任务将按照当前冲突策略处理\n\n' +
+								'请确保已正确配置同步参数。',
+								{ confirmText: '开始同步', cancelText: '取消' }
+							);
+							if (!confirmed) return;
 							await this.runManualSync();
 						}))
 					.addButton(button => button
@@ -145,6 +158,17 @@ export class SyncSettingsBuilder extends BaseBuilder {
 						.setTooltip('双向同步截止时间最新的 5 条真实任务，用于调试')
 						.setDisabled(!syncConfig.api?.tasklistGuid)
 						.onClick(async () => {
+							const confirmed = await showConfirmDialog(
+								this.plugin.app,
+								'测试同步',
+								'即将执行测试同步（限 5 条任务）：\n\n' +
+								'• 仅同步截止时间最新的 5 条真实任务\n' +
+								'• 双向同步：Obsidian ↔ 飞书\n' +
+								'• 不会影响已同步的任务\n\n' +
+								'确定继续？',
+								{ confirmText: '开始测试', cancelText: '取消' }
+							);
+							if (!confirmed) return;
 							await this.runTestSync();
 						}))
 			);
@@ -236,12 +260,15 @@ export class SyncSettingsBuilder extends BaseBuilder {
 				selectBtn.onclick = async () => {
 					const switching = !!selectedGuid;
 					if (switching) {
-						const confirmed = confirm(
-							'⚠️ 切换任务清单将触发全量同步\n\n' +
-							'为方便管理，Obsidian 中的任务仅会同步到当前选中的目标清单中，\n' +
-							'不会与飞书中其他清单的任务混淆。\n\n' +
-							'确定切换到清单「' + tl.name + '」吗？'
-						);
+							const confirmed = await showConfirmDialog(
+								this.plugin.app,
+								'切换任务清单',
+								'⚠️ 切换任务清单将触发全量同步\n\n' +
+								'为方便管理，Obsidian 中的任务仅会同步到当前选中的目标清单中，\n' +
+								'不会与飞书中其他清单的任务混淆。\n\n' +
+								'确定切换到清单「' + tl.name + '」吗？',
+								{ confirmText: '切换', cancelText: '取消' }
+							);
 						if (!confirmed) return;
 					}
 					if (!syncConfig.api) syncConfig.api = {} as any;
@@ -265,9 +292,12 @@ export class SyncSettingsBuilder extends BaseBuilder {
 			clearBtn.title = '删除该清单中的所有飞书任务（不可恢复）';
 			clearBtn.className = 'mod-warning';
 			clearBtn.onclick = async () => {
-				const confirmed = confirm(
-					'确定要清除清单「' + tl.name + '」中的所有任务吗？\n\n此操作将删除该清单下的所有飞书任务，不可恢复！'
-				);
+					const confirmed = await showConfirmDialog(
+						this.plugin.app,
+						'清除任务',
+						'确定要清除清单「' + tl.name + '」中的所有任务吗？\n\n此操作将删除该清单下的所有飞书任务，不可恢复！',
+						{ confirmText: '清除', cancelText: '取消', isDestructive: true }
+					);
 				if (!confirmed) return;
 				await this.clearFeishuTasklistTasks(tl.guid, tl.name);
 			};
@@ -939,10 +969,13 @@ export class SyncSettingsBuilder extends BaseBuilder {
 			return;
 		}
 
-		const confirmed = confirm(
-			'将向清单「' + tasklistName + '」中创建 5 个测试任务，\n' +
-			'用于验证同步功能是否正常。\n\n确定继续？'
-		);
+			const confirmed = await showConfirmDialog(
+				this.plugin.app,
+				'测试写入',
+				'将向清单「' + tasklistName + '」中创建 5 个测试任务，\n' +
+				'用于验证同步功能是否正常。\n\n确定继续？',
+				{ confirmText: '开始写入', cancelText: '取消' }
+			);
 		if (!confirmed) return;
 
 		try {

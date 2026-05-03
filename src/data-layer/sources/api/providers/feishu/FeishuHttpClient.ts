@@ -87,7 +87,7 @@ export class FeishuHttpClient {
                 Logger.error('FeishuHttpClient', 'HTTP error', {
                     status: result.status,
                     headers: result.headers,
-                    body: result.text,
+                    bodyLength: result.text?.length,
                 });
             }
 

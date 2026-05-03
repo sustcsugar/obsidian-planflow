@@ -26,8 +26,8 @@ export class TaskSettingsBuilder extends BaseBuilder {
 
 			// 全局任务筛选标记
 			addSetting(setting =>
-				setting.setName('全局任务筛选标记(修改此设置后需重启 Obsidian 生效)')
-					.setDesc('用于标记任务的前缀符号或文字（如 "🎯 ", "TODO ", "#task "）')
+				setting.setName('全局任务筛选标记')
+					.setDesc('用于标记任务的前缀符号或文字（如 "🎯 ", "TODO ", "#task "）。⚠ 修改后需重启 Obsidian')
 					.addText(text => text
 						.setPlaceholder('空则不使用筛选')
 						.setValue(this.plugin.settings.globalTaskFilter)

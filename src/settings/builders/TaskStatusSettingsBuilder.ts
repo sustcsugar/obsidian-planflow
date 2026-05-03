@@ -2,12 +2,10 @@ import { Setting, SettingGroup } from 'obsidian';
 import { BaseBuilder } from './BaseBuilder';
 import { TaskStatusCard } from '../components';
 import { AddCustomStatusModal } from '../modals';
+import { SettingsStatusCardClasses } from '../../utils/bem';
 import type { BuilderConfig } from '../types';
 import type { TaskStatus } from '../../tasks/taskStatus';
 
-/**
- * 任务状态设置构建器
- */
 export class TaskStatusSettingsBuilder extends BaseBuilder {
 	constructor(config: BuilderConfig) {
 		super(config);
@@ -24,88 +22,70 @@ export class TaskStatusSettingsBuilder extends BaseBuilder {
 				}
 			};
 
-			// 说明文字
-			const desc = container.createEl('div', {
-				cls: 'setting-item-description',
-				text: '配置任务状态的颜色和样式。支持 7 种默认状态和最多 3 个自定义状态。'
-			});
-			desc.addClass('gc-task-status-desc');
+			const cls = SettingsStatusCardClasses.elements;
 
-			// ========== 默认状态 ==========
+			// ── 默认状态 ──
 			addSetting(setting => {
 				setting.setName('默认状态')
-					.setDesc('内置的 7 种任务默认状态（不可删除）');
+					.setDesc('内置的 7 种任务状态，可自定义颜色');
 				setting.controlEl.remove();
+				setting.settingEl.style.flexDirection = 'column';
+				setting.settingEl.style.alignItems = 'flex-start';
 
-				const gridContainer = setting.settingEl.createDiv('task-status-cards-grid');
-
-
+				const grid = setting.settingEl.createDiv(cls.grid);
+				grid.style.gridTemplateColumns = 'repeat(3, 1fr)';
 				const defaultStatuses = this.plugin.settings.taskStatuses.filter((s: TaskStatus) => s.isDefault);
 				defaultStatuses.forEach((status: TaskStatus) => {
-					const card = new TaskStatusCard({
-						container: gridContainer,
+					new TaskStatusCard({
+						container: grid,
 						plugin: this.plugin,
-						status: status,
-						onColorChange: async () => { await this.saveAndRefreshViews(); }
-					});
-					card.render();
+						status,
+						onColorChange: async () => { await this.saveAndRefreshViews(); },
+					}).render();
 				});
 			});
 
-			// ========== 自定义状态 ==========
+			// ── 自定义状态 ──
 			const customStatuses = this.plugin.settings.taskStatuses.filter((s: TaskStatus) => !s.isDefault);
-			const customCount = customStatuses.length;
 			const maxCustom = 3;
 
-			// 添加按钮
-			if (customCount < maxCustom) {
+			if (customStatuses.length < maxCustom) {
 				addSetting(setting =>
 					setting.setName('添加自定义状态')
-						.setDesc(`创建一个新的任务状态（已添加 ${customCount}/${maxCustom} 个自定义状态）`)
+						.setDesc(`已添加 ${customStatuses.length}/${maxCustom} 个自定义状态`)
 						.addButton(button => button
 							.setButtonText('添加')
 							.setCta()
 							.onClick(() => {
-								this.showAddCustomStatusModal();
+								new AddCustomStatusModal(this.plugin.app, this.plugin, () => {
+									this.onRefreshSettings?.();
+								}).open();
 							}))
 				);
 			}
 
-			// 自定义状态卡片
 			if (customStatuses.length > 0) {
 				addSetting(setting => {
-					setting.setName('自定义状态')
-						.setDesc('最多支持 3 个自定义状态');
+					setting.setName('自定义状态');
 					setting.controlEl.remove();
+					setting.settingEl.style.flexDirection = 'column';
+					setting.settingEl.style.alignItems = 'flex-start';
 
-					const gridContainer = setting.settingEl.createDiv('task-status-cards-grid');
-
-
+					const grid = setting.settingEl.createDiv(cls.grid);
 					customStatuses.forEach((status: TaskStatus) => {
-						const card = new TaskStatusCard({
-							container: gridContainer,
+						new TaskStatusCard({
+							container: grid,
 							plugin: this.plugin,
-							status: status,
+							status,
 							onColorChange: async () => { await this.saveAndRefreshViews(); },
 							onDelete: async () => {
 								this.plugin.settings.taskStatuses = this.plugin.settings.taskStatuses.filter((s: TaskStatus) => s.key !== status.key);
 								await this.saveAndRefreshAll();
-							}
-						});
-						card.render();
+							},
+						}).render();
 					});
 				});
 			}
 		});
-	}
-
-	/**
-	 * 显示添加自定义状态模态框
-	 */
-	private showAddCustomStatusModal(): void {
-		const modal = new AddCustomStatusModal(this.plugin.app, this.plugin, () => {
-			this.onRefreshSettings?.();
-		});
-		modal.open();
 	}
 }

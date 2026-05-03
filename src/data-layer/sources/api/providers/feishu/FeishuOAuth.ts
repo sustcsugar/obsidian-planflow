@@ -144,9 +144,7 @@ export class FeishuOAuth {
             url: API_ENDPOINTS.TOKEN,
             method: 'POST',
             contentType: 'application/x-www-form-urlencoded',
-            body: requestBodyStr,
             appId: config.clientId,
-            code: code,
         });
 
         const response = await FeishuHttpClient.fetch(API_ENDPOINTS.TOKEN, {
@@ -157,10 +155,7 @@ export class FeishuOAuth {
             },
         }, fetchFn);
 
-        Logger.debug('FeishuOAuth', 'Token exchange response', {
-            status: response.status,
-            body: response.text,
-        });
+        Logger.debug('FeishuOAuth', 'Token exchange response', { status: response.status });
 
         // v2 API 响应格式直接包含 access_token，无 data 包裹层
         const data = await FeishuHttpClient.parseResponse<FeishuTokenResponseV2>(response);
@@ -214,8 +209,7 @@ export class FeishuOAuth {
             url: API_ENDPOINTS.REFRESH,
             method: 'POST',
             contentType: 'application/x-www-form-urlencoded',
-            body: requestBodyStr,
-        });
+            });
 
         const response = await FeishuHttpClient.fetch(API_ENDPOINTS.REFRESH, {
             method: 'POST',
@@ -225,10 +219,7 @@ export class FeishuOAuth {
             },
         }, fetchFn);
 
-        Logger.debug('FeishuOAuth', 'Token refresh response', {
-            status: response.status,
-            body: response.text,
-        });
+        Logger.debug('FeishuOAuth', 'Token refresh response', { status: response.status });
 
         // v2 API 响应格式直接包含 access_token，无 data 包裹层
         const data = await FeishuHttpClient.parseResponse<FeishuTokenResponseV2>(response);

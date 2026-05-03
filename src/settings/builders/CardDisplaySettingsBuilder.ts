@@ -1,49 +1,33 @@
 import { Setting, SettingGroup } from 'obsidian';
 import { BaseBuilder } from './BaseBuilder';
+import { SettingsCardChipClasses } from '../../utils/bem';
 import type { BuilderConfig, GanttCalendarSettings } from '../types';
 
-type ViewColumn = 'week' | 'month' | 'sidebar';
+type ViewType = 'week' | 'month' | 'sidebar';
 
-interface SharedToggleDef {
+interface ChipDef {
 	label: string;
-	keys: Record<ViewColumn, keyof GanttCalendarSettings>;
+	keys: Record<ViewType, keyof GanttCalendarSettings | undefined>;
 }
 
-interface SidebarToggleDef {
-	label: string;
-	key: keyof GanttCalendarSettings;
-}
-
-const VIEW_LABELS: Record<ViewColumn, string> = { week: '周', month: '月', sidebar: '侧' };
-
-const SHARED: SharedToggleDef[] = [
-	{
-		label: '显示复选框',
-		keys: { week: 'weekViewShowCheckbox', month: 'monthViewShowCheckbox', sidebar: 'sidebarShowCheckbox' },
-	},
-	{
-		label: '显示任务标签',
-		keys: { week: 'weekViewShowTags', month: 'monthViewShowTags', sidebar: 'sidebarShowTags' },
-	},
-	{
-		label: '显示优先级',
-		keys: { week: 'weekViewShowPriority', month: 'monthViewShowPriority', sidebar: 'sidebarShowPriority' },
-	},
-	{
-		label: '显示 Ticktick',
-		keys: { week: 'weekViewShowTicktick', month: 'monthViewShowTicktick', sidebar: 'sidebarShowTicktick' },
-	},
+const SHARED_CHIPS: ChipDef[] = [
+	{ label: '复选框', keys: { week: 'weekViewShowCheckbox', month: 'monthViewShowCheckbox', sidebar: 'sidebarShowCheckbox' } },
+	{ label: '标签', keys: { week: 'weekViewShowTags', month: 'monthViewShowTags', sidebar: 'sidebarShowTags' } },
+	{ label: '优先级', keys: { week: 'weekViewShowPriority', month: 'monthViewShowPriority', sidebar: 'sidebarShowPriority' } },
+	{ label: 'Ticktick', keys: { week: 'weekViewShowTicktick', month: 'monthViewShowTicktick', sidebar: 'sidebarShowTicktick' } },
 ];
 
-const SIDEBAR_ONLY: SidebarToggleDef[] = [
-	{ label: '显示文件位置', key: 'sidebarShowFileLocation' },
-	{ label: '显示截止日期', key: 'sidebarShowDueDate' },
+const SIDEBAR_CHIPS: ChipDef[] = [
+	{ label: '文件位置', keys: { week: undefined, month: undefined, sidebar: 'sidebarShowFileLocation' } },
+	{ label: '截止日期', keys: { week: undefined, month: undefined, sidebar: 'sidebarShowDueDate' } },
 ];
 
-/**
- * 整合的卡片显示控制构建器
- * 将原来分散在周视图/月视图/侧边栏中的重复显示拨动开关整合为紧凑的列式网格布局
- */
+const VIEW_ROWS: { view: ViewType; name: string }[] = [
+	{ view: 'week', name: '周视图' },
+	{ view: 'month', name: '月视图' },
+	{ view: 'sidebar', name: '侧边栏' },
+];
+
 export class CardDisplaySettingsBuilder extends BaseBuilder {
 	constructor(config: BuilderConfig) {
 		super(config);
@@ -61,66 +45,76 @@ export class CardDisplaySettingsBuilder extends BaseBuilder {
 
 			const settings = this.plugin.settings as unknown as Record<string, unknown>;
 
-			// 共享拨动行（周/月/侧 各一列）
-			for (const def of SHARED) {
+			for (const { view, name } of VIEW_ROWS) {
 				addSetting(setting => {
-					setting.setName(def.label);
-					const row = setting.controlEl.createDiv('gc-card-toggle-row');
+					setting.setName(name);
 
-					for (const view of ['week', 'month', 'sidebar'] as ViewColumn[]) {
-						const key = def.keys[view];
-						const cell = row.createDiv('gc-card-toggle-cell');
-						const label = cell.createEl('span', {
-							text: VIEW_LABELS[view],
-							cls: 'gc-card-toggle-cell-label',
-						});
-						const input = cell.createEl('input', {
-							type: 'checkbox',
-							attr: { 'aria-label': `${def.label} - ${VIEW_LABELS[view]}视图` },
-						}) as HTMLInputElement;
-						input.checked = !!settings[key];
-						input.addEventListener('change', async () => {
-							settings[key] = input.checked;
-							await this.saveAndRefreshViews();
-						});
+					const row = setting.controlEl.createDiv(SettingsCardChipClasses.elements.chipRow);
+
+					// Shared chips (all views)
+					for (const chip of SHARED_CHIPS) {
+						const key = chip.keys[view]!;
+						this.createChip(
+							row,
+							chip.label,
+							!!settings[key as string],
+							`${name} - ${chip.label}`,
+							async (value) => {
+								settings[key as string] = value;
+								await this.saveAndRefreshViews();
+							}
+						);
+					}
+
+					// Sidebar-only chips
+					if (view === 'sidebar') {
+						for (const chip of SIDEBAR_CHIPS) {
+							const key = chip.keys[view]!;
+							this.createChip(
+								row,
+								chip.label,
+								!!settings[key as string],
+								`${name} - ${chip.label}`,
+								async (value) => {
+									settings[key as string] = value;
+									await this.saveAndRefreshViews();
+								}
+							);
+						}
 					}
 				});
 			}
+		});
+	}
 
-			// 分隔线
-			addSetting(setting => {
-				setting.setName('').setDesc('');
-				setting.controlEl.empty();
-				setting.controlEl.createEl('hr', 'gc-card-toggle-divider');
-			});
+	private createChip(
+		parent: HTMLElement,
+		text: string,
+		active: boolean,
+		ariaLabel: string,
+		onChange: (value: boolean) => Promise<void>
+	): HTMLDivElement {
+		const cls = SettingsCardChipClasses;
+		const chip = parent.createDiv(cls.elements.chip);
+		chip.setText(text);
+		chip.setAttribute('role', 'switch');
+		chip.setAttribute('aria-checked', String(active));
+		chip.setAttribute('aria-label', ariaLabel);
+		chip.setAttribute('tabindex', '0');
+		if (active) chip.addClass(cls.modifiers.chipActive);
 
-			// 侧边栏专属行
-			for (const def of SIDEBAR_ONLY) {
-				addSetting(setting => {
-					setting.setName(def.label);
-					const row = setting.controlEl.createDiv('gc-card-toggle-row');
-
-					// 占位（周、月）
-					row.createDiv('gc-card-toggle-spacer');
-					row.createDiv('gc-card-toggle-spacer');
-
-					// 侧边栏拨动
-					const cell = row.createDiv('gc-card-toggle-cell');
-					const label = cell.createEl('span', {
-						text: '侧',
-						cls: 'gc-card-toggle-cell-label',
-					});
-					const input = cell.createEl('input', {
-						type: 'checkbox',
-						attr: { 'aria-label': `${def.label} - 侧边栏` },
-					}) as HTMLInputElement;
-					input.checked = !!settings[def.key];
-					input.addEventListener('change', async () => {
-						settings[def.key] = input.checked;
-						await this.saveAndRefreshViews();
-					});
-				});
+		chip.addEventListener('click', async () => {
+			const next = !chip.hasClass(cls.modifiers.chipActive);
+			chip.toggleClass(cls.modifiers.chipActive, next);
+			chip.setAttribute('aria-checked', String(next));
+			await onChange(next);
+		});
+		chip.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				chip.click();
 			}
 		});
+		return chip;
 	}
 }

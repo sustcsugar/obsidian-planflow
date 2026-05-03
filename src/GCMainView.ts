@@ -137,6 +137,10 @@ export class GCMainView extends ItemView {
 		this.weekRenderer.runDomCleanups();
 		this.dayRenderer.runDomCleanups();
 		this.taskRenderer.runDomCleanups();
+		this.ganttRenderer.runDomCleanups();
+
+		// Cleanup toolbar
+		this.toolbar.destroy();
 
 		// Cleanup resize observer
 		if (this.resizeObserver) {
@@ -146,7 +150,7 @@ export class GCMainView extends ItemView {
 
 	private setupResizeObserver(): void {
 		// 监听容器大小变化，重新计算年视图农历显示
-		const content = this.containerEl.children[1];
+		const content = this.contentEl;
 		if (!content) return;
 
 		try {
@@ -173,7 +177,7 @@ export class GCMainView extends ItemView {
 		this.dayRenderer.runDomCleanups();
 		this.taskRenderer.runDomCleanups();
 
-		const container = this.containerEl.children[1];
+		const container = this.contentEl;
 		container.empty();
 		container.removeClass('gantt-root');
 

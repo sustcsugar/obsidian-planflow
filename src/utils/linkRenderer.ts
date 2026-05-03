@@ -88,6 +88,17 @@ export class LinkRenderer {
 				const displayText = m.groups[1]; // [text]
 				const url = m.groups[2]; // (url)
 				const link = container.createEl('a', { text: displayText, cls: 'gc-link gc-link--markdown' });
+				const safeSchemes = ['http:', 'https:', 'mailto:', 'tel:', 'app:'];
+				try {
+					const parsed = new URL(url);
+					if (!safeSchemes.includes(parsed.protocol)) {
+						lastIndex = m.end;
+						continue;
+					}
+				} catch {
+					lastIndex = m.end;
+					continue;
+				}
 				link.href = url;
 				link.setAttr('target', '_blank');
 				link.setAttr('rel', 'noopener noreferrer');
