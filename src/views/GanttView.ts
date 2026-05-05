@@ -48,6 +48,9 @@ export class GanttViewRenderer extends BaseViewRenderer {
 	// 刷新后是否滚动到今天（用户主动点击刷新按钮时为true）
 	private shouldScrollToTodayOnRefresh = false;
 
+	// 防止重复刷新的递归保护标志
+	private isRefreshing = false;
+
 	// Getter 方法（供工具栏调用）- 从插件设置读取
 	public getStartField(): DateFieldType { return this.plugin.settings.ganttStartField; }
 	public setStartField(value: DateFieldType): void {
@@ -137,14 +140,14 @@ export class GanttViewRenderer extends BaseViewRenderer {
 	 * 当外部文件变更时调用此方法执行增量更新
 	 */
 	public refreshTasks(): void {
-		this.performRefreshWithRetry(0);
+		this.performRefreshWithRetry();
 	}
 
 	/**
 	 * 执行刷新
 	 * 依赖 TaskStore 的事件通知系统，确保缓存已更新
 	 */
-	private performRefreshWithRetry(_retryCount: number): void {
+	private performRefreshWithRetry(): void {
 		try {
 			// 如果甘特图还未初始化，跳过
 			if (!this.ganttWrapper || !this.currentContainer) {
@@ -192,7 +195,9 @@ export class GanttViewRenderer extends BaseViewRenderer {
 	 * 刷新甘特图
 	 */
 	private refresh(): void {
+		if (this.isRefreshing) return;
 		if (this.currentContainer && this.currentContainer.isConnected) {
+			this.isRefreshing = true;
 			// 设置标志位：刷新后滚动到今天
 			this.shouldScrollToTodayOnRefresh = true;
 			this.render(this.currentContainer, new Date());
@@ -309,9 +314,11 @@ export class GanttViewRenderer extends BaseViewRenderer {
 			}
 			// 重置标志位
 			this.shouldScrollToTodayOnRefresh = false;
+			this.isRefreshing = false;
 
 		} catch (error) {
 			Logger.error('GanttView', 'Error rendering gantt:', error);
+			this.isRefreshing = false;
 			root.createEl('div', {
 				text: '渲染甘特图时出错: ' + (error as Error).message,
 				cls: 'gantt-error'
@@ -409,51 +416,6 @@ export class GanttViewRenderer extends BaseViewRenderer {
 			progress,
 			this.currentGlobalTasks
 		);
-	}
-
-	/**
-	 * 增量更新（不完整重建视图）
-	 * 当单个任务更新时调用，只更新受影响的 DOM 元素
-	 */
-	private incrementallyUpdate(filePath: string): void {
-		try {
-			// 1. 更新内部任务数据
-			const globalTasks: GCTask[] = this.plugin.taskCache.getAllTasks();
-			const oldGanttTasks = this.currentGanttTasks;
-			this.currentGlobalTasks = globalTasks;
-
-			// 2. 应用筛选和排序
-			let filteredGlobalTasks = TaskDataAdapter.applyFilters(
-			globalTasks,
-			this.getStatusFilterState(),
-			this.tagFilterState.selectedTags,
-			this.tagFilterState.operator
-		);
-			filteredGlobalTasks = sortTasks(filteredGlobalTasks, this.sortState);
-
-			// 3. 转换为 GanttChartTask
-			const ganttTasks = TaskDataAdapter.toGanttChartTasks(
-				filteredGlobalTasks,
-				this.getStartField(),
-				this.getEndField()
-			);
-			this.currentGanttTasks = ganttTasks;
-
-			// 4. 判断更新策略
-			if (this.shouldFullRefresh(oldGanttTasks, ganttTasks)) {
-				// 排序变化或任务数量变化大，执行完整刷新
-				this.refresh();
-			} else {
-				// 只更新视觉，保持滚动位置
-				if (this.ganttWrapper) {
-					this.ganttWrapper.updateTasks(ganttTasks);
-				}
-			}
-		} catch (error) {
-			Logger.error('GanttView', 'Error in incremental update:', error);
-			// 出错时回退到完整刷新
-			this.refresh();
-		}
 	}
 
 	/**

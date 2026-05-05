@@ -39,18 +39,6 @@ export class WeekViewRenderer extends BaseViewRenderer {
 	}
 
 	/**
-	 * 初始化排序状态
-	 */
-	/**
-	 * 保存排序状态
-	 */
-	/**
-	 * 重写状态筛选 setter 以支持持久化
-	 */
-	/**
-	 * 重写标签筛选 setter 以支持持久化
-	 */
-	/**
 	 * 检测周内是否有带时间精度的任务
 	 */
 	private hasTimedTasks(tasks: GCTask[], weekStart: Date, weekEnd: Date): boolean {

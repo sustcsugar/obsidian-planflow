@@ -38,18 +38,6 @@ export class DayViewRenderer extends BaseViewRenderer {
 		this.initializeSortState({ field: 'dueDate', order: 'asc' });
 	}
 
-	/**
-	 * 初始化排序状态
-	 */
-	/**
-	 * 保存排序状态
-	 */
-	/**
-	 * 重写状态筛选 setter 以支持持久化
-	 */
-	/**
-	 * 重写标签筛选 setter 以支持持久化
-	 */
 	render(container: HTMLElement, currentDate: Date): void {
 		// 保存当前日期用于增量刷新
 		this.currentDate = new Date(currentDate);

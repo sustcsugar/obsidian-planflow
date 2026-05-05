@@ -4,7 +4,7 @@
  */
 
 import { App, Notice } from 'obsidian';
-import type { GCTask } from '../../types';
+import type { GCTask, IPluginContext } from '../../types';
 import type { GanttChartTask, DateFieldType } from '../types';
 import { formatDate } from '../../dateUtils/dateUtilsIndex';
 import { Logger } from '../../utils/logger';
@@ -23,7 +23,7 @@ export type TaskUpdateCallback = (filePath: string) => void;
 export class TaskUpdateHandler {
 	constructor(
 		private app: App,
-		private plugin: any
+		private plugin: IPluginContext
 	) {}
 
 	/**

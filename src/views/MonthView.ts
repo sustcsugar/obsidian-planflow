@@ -23,18 +23,6 @@ export class MonthViewRenderer extends BaseViewRenderer {
 	}
 
 	/**
-	 * 初始化排序状态
-	 */
-	/**
-	 * 保存排序状态
-	 */
-	/**
-	 * 重写状态筛选 setter 以支持持久化
-	 */
-	/**
-	 * 重写标签筛选 setter 以支持持久化
-	 */
-	/**
 	 * 设置日期格子的拖放功能
 	 */
 	private setupDragDropForDayCell(dayCell: HTMLElement, targetDate: Date): void {

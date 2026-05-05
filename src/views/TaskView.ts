@@ -34,9 +34,6 @@ export class TaskViewRenderer extends BaseViewRenderer {
 	}
 
 	/**
-	 * 初始化排序状态
-	 */
-	/**
 	 * 初始化 TaskView 特有状态
 	 */
 	private initializeTaskViewSpecificStates(): void {
@@ -51,9 +48,6 @@ export class TaskViewRenderer extends BaseViewRenderer {
 		}
 	}
 
-	/**
-	 * 保存排序状态
-	 */
 	/**
 	 * 保存时间字段筛选
 	 */
@@ -104,12 +98,6 @@ export class TaskViewRenderer extends BaseViewRenderer {
 		});
 	}
 
-	/**
-	 * 重写状态筛选 setter 以支持持久化
-	 */
-	/**
-	 * 重写标签筛选 setter 以支持持久化
-	 */
 	render(container: HTMLElement, currentDate: Date): void {
 		// 创建任务视图容器
 		const taskRoot = container.createDiv(withModifiers(ViewClasses.block, ViewClasses.modifiers.task));

@@ -72,6 +72,8 @@ export const DEFAULT_SETTINGS: GanttCalendarSettings = {
 	weekViewShowTicktick: true,
 
 	// MonthView
+	monthViewSortField: 'dueDate',
+	monthViewSortOrder: 'asc',
 	monthViewSelectedStatuses: ['todo'],
 	monthViewSelectedTags: [],
 	monthViewTagOperator: 'OR',

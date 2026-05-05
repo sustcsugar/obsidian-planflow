@@ -78,6 +78,8 @@ export interface GanttCalendarSettings {
 		weekViewShowTicktick: boolean;
 
 	// MonthView 状态
+	monthViewSortField: SortField;
+	monthViewSortOrder: SortOrder;
 	monthViewSelectedStatuses: string[];
 	monthViewSelectedTags: string[];
 	monthViewTagOperator: TagFilterOperator;
