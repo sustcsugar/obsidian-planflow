@@ -12,6 +12,7 @@ import { FeishuTaskSync } from '../../data-layer/feishu-sync/FeishuTaskSync';
 import { SyncStateManager } from '../../data-layer/feishu-sync/syncState';
 import { Logger } from '../../utils/logger';
 import { FileSuggest } from '../components';
+import { PushFilterConfig, DEFAULT_PUSH_FILTER } from '../../utils/taskFilter';
 
 /**
  * 同步设置构建器
@@ -56,6 +57,9 @@ export class SyncSettingsBuilder extends BaseBuilder {
 			// 任务清单提示和卡片
 			this.renderTasklistCards(container, syncConfig);
 		});
+
+		// ===== 推送过滤 =====
+		this.renderPushFilter();
 
 		// ===== 分组 2：同步配置 =====
 		this.createSettingGroup('同步配置', (group) => {
@@ -714,6 +718,242 @@ export class SyncSettingsBuilder extends BaseBuilder {
 	}
 
 
+
+	// ==================== 推送过滤 ====================
+
+	/**
+	 * 渲染推送过滤设置
+	 * 提供状态、标签、优先级、路径四个维度的组合过滤条件
+	 */
+	private renderPushFilter(): void {
+		const syncConfig = this.getSyncConfiguration();
+		const pushFilter: PushFilterConfig = syncConfig.pushFilter || DEFAULT_PUSH_FILTER;
+
+		this.createSettingGroup('推送过滤', (group) => {
+			const addSetting = (cb: (setting: Setting) => void) => {
+				if (this.isSettingGroupAvailable()) {
+					(group as SettingGroup).addSetting(cb);
+				} else {
+					cb(new Setting(this.containerEl));
+				}
+			};
+
+			// 启用开关
+			addSetting(setting =>
+				setting.setName('启用推送过滤')
+					.setDesc('开启后，仅符合条件的本地任务推送到飞书，拉取不受影响')
+					.addToggle(toggle => toggle
+						.setValue(pushFilter.enabled)
+						.onChange(async (value: boolean) => {
+							if (!syncConfig.pushFilter) {
+								syncConfig.pushFilter = { ...DEFAULT_PUSH_FILTER };
+							}
+							syncConfig.pushFilter.enabled = value;
+							await this.saveAndRefreshViews();
+						}))
+			);
+
+			// 状态多选
+			const taskStatuses = this.plugin.settings.taskStatuses || [];
+			const statusOptions: Record<string, string> = {};
+			for (const s of taskStatuses) {
+				statusOptions[s.key] = s.name || s.key;
+			}
+			if (!statusOptions['todo']) statusOptions['todo'] = '待办';
+			if (!statusOptions['done']) statusOptions['done'] = '已完成';
+			if (!statusOptions['in_progress']) statusOptions['in_progress'] = '进行中';
+			if (!statusOptions['canceled']) statusOptions['canceled'] = '已取消';
+
+			addSetting(setting =>
+				setting.setName('状态过滤')
+					.setDesc('仅推送所选状态的任务（不选=全部）')
+					.addDropdown(drop => {
+						drop.addOptions(statusOptions);
+						drop.setValue('');
+						drop.onChange(async (value: string) => {
+							if (!value) return;
+							if (!syncConfig.pushFilter) {
+								syncConfig.pushFilter = { ...DEFAULT_PUSH_FILTER };
+							}
+							if (!syncConfig.pushFilter.statuses.includes(value)) {
+								syncConfig.pushFilter.statuses = [...syncConfig.pushFilter.statuses, value];
+							}
+							await this.saveAndRefreshViews();
+							await this.saveAndRefreshAll();
+						});
+						drop.selectEl.options[0] && (drop.selectEl.options[0].text = '选择状态...');
+					})
+			);
+
+			// 已选状态标签
+			if (pushFilter.statuses.length > 0) {
+				const statusTagsEl = this.containerEl.createDiv('gc-sync-filter-tags');
+				pushFilter.statuses.forEach(statusKey => {
+					const tagEl = statusTagsEl.createEl('span', {
+						text: (statusOptions[statusKey] || statusKey) + ' ×',
+						cls: 'gc-sync-filter-tag'
+					});
+					tagEl.onclick = async () => {
+						if (!syncConfig.pushFilter) return;
+						syncConfig.pushFilter.statuses = syncConfig.pushFilter.statuses.filter((s: string) => s !== statusKey);
+						await this.saveAndRefreshViews();
+						await this.saveAndRefreshAll();
+					};
+				});
+			}
+
+			// 标签输入
+			addSetting(setting =>
+				setting.setName('标签过滤')
+					.setDesc('输入标签名后回车添加（不选=全部）')
+					.addText(text => {
+						text.setPlaceholder('输入标签名...');
+						text.inputEl.onkeydown = async (e: KeyboardEvent) => {
+							if (e.key === 'Enter') {
+								const value = text.getValue().trim();
+								if (!value) return;
+								if (!syncConfig.pushFilter) {
+									syncConfig.pushFilter = { ...DEFAULT_PUSH_FILTER };
+								}
+								if (!syncConfig.pushFilter.tags.includes(value)) {
+									syncConfig.pushFilter.tags = [...syncConfig.pushFilter.tags, value];
+									text.setValue('');
+									await this.saveAndRefreshViews();
+									await this.saveAndRefreshAll();
+								}
+							}
+						};
+					})
+			);
+
+			// 已选标签
+			if (pushFilter.tags.length > 0) {
+				const tagTagsEl = this.containerEl.createDiv('gc-sync-filter-tags');
+				pushFilter.tags.forEach((tag: string) => {
+					const tagEl = tagTagsEl.createEl('span', {
+						text: tag + ' ×',
+						cls: 'gc-sync-filter-tag'
+					});
+					tagEl.onclick = async () => {
+						if (!syncConfig.pushFilter) return;
+						syncConfig.pushFilter.tags = syncConfig.pushFilter.tags.filter((t: string) => t !== tag);
+						await this.saveAndRefreshViews();
+						await this.saveAndRefreshAll();
+					};
+				});
+			}
+
+			// 标签组合器
+			if (pushFilter.tags.length > 1) {
+				addSetting(setting =>
+					setting.setName('标签匹配方式')
+						.setDesc('多个标签之间的逻辑关系')
+						.addDropdown(drop => drop
+							.addOptions({
+								'OR': '任一匹配 (OR)',
+								'AND': '全部匹配 (AND)',
+								'NOT': '排除标签 (NOT)',
+							})
+							.setValue(pushFilter.tagOperator)
+							.onChange(async (value: string) => {
+								if (!syncConfig.pushFilter) {
+									syncConfig.pushFilter = { ...DEFAULT_PUSH_FILTER };
+								}
+								syncConfig.pushFilter.tagOperator = value as 'AND' | 'OR' | 'NOT';
+								await this.saveAndRefreshViews();
+							}))
+				);
+			}
+
+			// 优先级过滤
+			const priorityOptions: Record<string, string> = {
+				'highest': '🔺 最高',
+				'high': '⏫ 高',
+				'medium': '🔼 中',
+				'normal': '普通',
+				'low': '🔽 低',
+				'lowest': '⏬ 最低',
+			};
+
+			addSetting(setting =>
+				setting.setName('优先级过滤')
+					.setDesc('仅推送所选优先级的任务（不选=全部）')
+					.addDropdown(drop => {
+						drop.addOptions(priorityOptions);
+						drop.setValue('');
+						drop.onChange(async (value: string) => {
+							if (!value) return;
+							if (!syncConfig.pushFilter) {
+								syncConfig.pushFilter = { ...DEFAULT_PUSH_FILTER };
+							}
+							if (!syncConfig.pushFilter.priorities.includes(value)) {
+								syncConfig.pushFilter.priorities = [...syncConfig.pushFilter.priorities, value];
+							}
+							await this.saveAndRefreshViews();
+							await this.saveAndRefreshAll();
+						});
+						drop.selectEl.options[0] && (drop.selectEl.options[0].text = '选择优先级...');
+					})
+			);
+
+			// 已选优先级标签
+			if (pushFilter.priorities.length > 0) {
+				const prioEl = this.containerEl.createDiv('gc-sync-filter-tags');
+				pushFilter.priorities.forEach((p: string) => {
+					const tagEl = prioEl.createEl('span', {
+						text: (priorityOptions[p] || p) + ' ×',
+						cls: 'gc-sync-filter-tag'
+					});
+					tagEl.onclick = async () => {
+						if (!syncConfig.pushFilter) return;
+						syncConfig.pushFilter.priorities = syncConfig.pushFilter.priorities.filter((v: string) => v !== p);
+						await this.saveAndRefreshViews();
+						await this.saveAndRefreshAll();
+					};
+				});
+			}
+
+			// 路径过滤
+			addSetting(setting =>
+				setting.setName('路径过滤')
+					.setDesc('按文件路径过滤，每行一个路径。文件夹路径以 / 结尾')
+					.addTextArea(text => {
+						text.setPlaceholder('每行一个路径，如：\nprojects/\nDaily/Tasks.md')
+							.setValue(pushFilter.paths.join('\n'));
+						text.inputEl.rows = 3;
+						text.onChange(async (value: string) => {
+							if (!syncConfig.pushFilter) {
+								syncConfig.pushFilter = { ...DEFAULT_PUSH_FILTER };
+							}
+							syncConfig.pushFilter.paths = value.split('\n').map((p: string) => p.trim()).filter((p: string) => p.length > 0);
+							await this.saveAndRefreshViews();
+						});
+					})
+			);
+
+			// 路径模式
+			if (pushFilter.paths.length > 0) {
+				addSetting(setting =>
+					setting.setName('路径匹配模式')
+						.setDesc('include = 仅同步匹配路径的任务，exclude = 排除匹配路径的任务')
+						.addDropdown(drop => drop
+							.addOptions({
+								'include': '包含 (Include)',
+								'exclude': '排除 (Exclude)',
+							})
+							.setValue(pushFilter.pathMode)
+							.onChange(async (value: string) => {
+								if (!syncConfig.pushFilter) {
+									syncConfig.pushFilter = { ...DEFAULT_PUSH_FILTER };
+								}
+								syncConfig.pushFilter.pathMode = value as 'include' | 'exclude';
+								await this.saveAndRefreshViews();
+							}))
+				);
+			}
+		});
+	}
+
 	// ==================== 配置读写 ====================
 
 	private getSyncConfiguration(): any {
@@ -726,7 +966,11 @@ export class SyncSettingsBuilder extends BaseBuilder {
 				feishuSyncTargetFile: 'gantt-calendar-feishu-sync.md',
 			};
 		}
-		return this.plugin.settings.syncConfiguration;
+		const config = this.plugin.settings.syncConfiguration;
+		if (!config.pushFilter) {
+			config.pushFilter = { ...DEFAULT_PUSH_FILTER };
+		}
+		return config;
 	}
 
 	private updateSyncConfig(updates: any): void {
@@ -802,6 +1046,7 @@ export class SyncSettingsBuilder extends BaseBuilder {
 				targetFile: syncConfig.feishuSyncTargetFile || 'gantt-calendar-feishu-sync.md',
 				enabledFormats: (this.plugin.settings.enabledTaskFormats as ('tasks' | 'dataview')[]) || ['tasks', 'dataview'],
 				globalFilter: this.plugin.settings.globalTaskFilter,
+				pushFilter: syncConfig.pushFilter as PushFilterConfig,
 			});
 
 			const result = await syncEngine.sync();
@@ -873,6 +1118,7 @@ export class SyncSettingsBuilder extends BaseBuilder {
 				targetFile: syncConfig.feishuSyncTargetFile || 'gantt-calendar-feishu-sync.md',
 				enabledFormats: (this.plugin.settings.enabledTaskFormats as ('tasks' | 'dataview')[]) || ['tasks', 'dataview'],
 				globalFilter: this.plugin.settings.globalTaskFilter,
+				pushFilter: syncConfig.pushFilter as PushFilterConfig,
 				tasklistGuid,
 				creatorOpenId: apiConfig.userOpenId,
 			});

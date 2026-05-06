@@ -20,6 +20,7 @@ import {
 import { parseTasksFromFile } from '../../tasks/taskParser/main';
 import { serializeTask, TaskUpdates } from '../../tasks/taskSerializer';
 import { Logger } from '../../utils/logger';
+import { PushFilterConfig, applyPushFilter } from '../../utils/taskFilter';
 
 /** 冲突解决策略 */
 export type ConflictStrategy = 'newest-win' | 'local-win' | 'remote-win';
@@ -43,6 +44,8 @@ export interface FeishuSyncOptions {
     onProgress?: SyncProgressCallback;
     /** 授权用户的 open_id，用于设置任务负责人 */
     creatorOpenId?: string;
+    /** 推送过滤配置（仅限制 Obsidian → 飞书方向的推送） */
+    pushFilter?: PushFilterConfig;
 }
 
 /** 同步结果 */
@@ -125,6 +128,13 @@ export class FeishuTaskSync {
 
             Logger.info('FeishuTaskSync', `Detected ${changes.length} pending changes`);
 
+            // 应用推送过滤（仅限制 push-create 和 push-update）
+            if (this.options.pushFilter?.enabled) {
+                const before = changes.length;
+                this.filterPushChanges(changes);
+                Logger.info('FeishuTaskSync', `Push filter: ${before} → ${changes.length} changes (filtered ${before - changes.length})`);
+            }
+
             // 4. 应用变更
             const total = changes.length;
             for (let i = 0; i < changes.length; i++) {
@@ -201,11 +211,14 @@ export class FeishuTaskSync {
             onProgress?.('🧪 测试同步: 获取本地任务...');
             const obsidianTasks = await this.fetchObsidianTasks();
 
-            // 2. OB → 飞书：取截止时间最新、且未同步的任务
-            const obTasksToPush = obsidianTasks
+            // 2. OB → 飞书：取截止时间最新、且未同步的任务（应用推送过滤）
+            let obTasksCandidates = obsidianTasks
                 .filter(t => !t.feishuGuid && t.dueDate)
-                .sort((a, b) => b.dueDate!.getTime() - a.dueDate!.getTime())
-                .slice(0, limit);
+                .sort((a, b) => b.dueDate!.getTime() - a.dueDate!.getTime());
+            if (this.options.pushFilter?.enabled) {
+                obTasksCandidates = applyPushFilter(obTasksCandidates, this.options.pushFilter);
+            }
+            const obTasksToPush = obTasksCandidates.slice(0, limit);
 
             // 3. 飞书 → OB：取截止时间最新、且未同步的任务
             const feishuTasksToPull = feishuTasks
@@ -519,6 +532,36 @@ export class FeishuTaskSync {
             task.feishuDesc || '',
         ];
         return parts.join('|');
+    }
+
+    /**
+     * 对 push-create / push-update 变更应用推送过滤
+     * pull 方向变更始终保留，不受过滤影响
+     */
+    private filterPushChanges(changes: PendingChange[]): void {
+        const filter = this.options.pushFilter;
+        if (!filter?.enabled) return;
+
+        // 收集所有出现在 push 变更中的 obsidianTask
+        const pushTasks = changes
+            .filter(c => c.type === 'push-create' || c.type === 'push-update')
+            .map(c => c.obsidianTask!)
+            .filter(Boolean);
+        const uniquePushTasks = [...new Map(pushTasks.map(t => [t.filePath + ':' + t.lineNumber, t])).values()];
+        const passingTasks = new Set(
+            applyPushFilter(uniquePushTasks, filter).map(t => t.filePath + ':' + t.lineNumber)
+        );
+
+        // 移除不通过过滤的 push 变更
+        for (let i = changes.length - 1; i >= 0; i--) {
+            const change = changes[i];
+            if (change.type === 'push-create' || change.type === 'push-update') {
+                const key = change.obsidianTask!.filePath + ':' + change.obsidianTask!.lineNumber;
+                if (!passingTasks.has(key)) {
+                    changes.splice(i, 1);
+                }
+            }
+        }
     }
 
     // ==================== 变更应用 ====================

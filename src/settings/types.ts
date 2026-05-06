@@ -159,6 +159,15 @@ export interface GanttCalendarSettings {
 			field: 'description' | 'completed' | 'dueDate' | 'startDate' | 'priority' | 'status' | 'tags';
 			winner: 'local' | 'remote' | 'newest';
 		}>;
+		pushFilter?: {
+			enabled: boolean;
+			statuses: string[];
+			tags: string[];
+			tagOperator: 'AND' | 'OR' | 'NOT';
+			priorities: string[];
+			paths: string[];
+			pathMode: 'include' | 'exclude';
+		};
 	};
 }
 
