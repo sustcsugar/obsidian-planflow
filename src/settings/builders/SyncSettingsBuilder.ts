@@ -1146,6 +1146,7 @@ export class SyncSettingsBuilder extends BaseBuilder {
 				pushFilter: syncConfig.pushFilter as PushFilterConfig,
 				tasklistGuid,
 				creatorOpenId: apiConfig.userOpenId,
+				creatorUserId: apiConfig.userId,
 				abortSignal: controller.signal,
 			});
 

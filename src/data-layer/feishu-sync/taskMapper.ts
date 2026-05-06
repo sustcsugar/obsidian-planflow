@@ -36,11 +36,6 @@ export function toFeishuTaskPayload(task: GCTask): FeishuTaskPayload {
         payload.summary = task.description;
     }
 
-    // feishuDesc → description (separate field, no infinite iteration)
-    if (task.feishuDesc) {
-        payload.description = task.feishuDesc;
-    }
-
     // dueDate → due
     if (task.dueDate) {
         payload.due = {
@@ -78,7 +73,6 @@ export function toFeishuCompleted(task: GCTask): boolean {
 export interface GCTaskUpdates {
     description?: string;
     feishuGuid?: string | null;   // null 表示清除飞书 GUID
-    feishuDesc?: string | null;   // null 表示清除飞书描述
     completed?: boolean;
     priority?: string;
     dueDate?: Date;
@@ -102,11 +96,6 @@ export function fromFeishuTask(feishu: FeishuTask): GCTaskUpdates {
     // summary → description
     if (feishu.summary) {
         updates.description = feishu.summary;
-    }
-
-    // description → feishuDesc (rename to avoid merging with summary)
-    if (feishu.description) {
-        updates.feishuDesc = feishu.description;
     }
 
     // completed

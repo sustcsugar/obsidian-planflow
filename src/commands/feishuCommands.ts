@@ -169,6 +169,7 @@ async function syncFeishuTasks(plugin: GanttCalendarPlugin): Promise<void> {
             onProgress: (stage: string) => plugin.setSyncStatus(stage),
             tasklistGuid: apiConfig?.tasklistGuid,
             creatorOpenId: apiConfig?.userOpenId,
+            creatorUserId: apiConfig?.userId,
         });
 
         // 执行同步

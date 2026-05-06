@@ -209,9 +209,6 @@ export function serializeTask(
 	if (merged.feishuGuid) {
 		parts.push(`%%[guid:: ${merged.feishuGuid}]%%`);
 	}
-	if (merged.feishuDesc) {
-		parts.push(`%%[desc:: ${merged.feishuDesc}]%%`);
-	}
 
 	// ticktick
 	if (merged.ticktick) {

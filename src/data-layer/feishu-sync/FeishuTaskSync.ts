@@ -44,6 +44,8 @@ export interface FeishuSyncOptions {
     onProgress?: SyncProgressCallback;
     /** 授权用户的 open_id，用于设置任务负责人 */
     creatorOpenId?: string;
+    /** 授权用户的 user_id，用于匹配 GUI 创建的任务负责人 */
+    creatorUserId?: string;
     /** 推送过滤配置（仅限制 Obsidian → 飞书方向的推送） */
     pushFilter?: PushFilterConfig;
     /** 中断信号，用于手动停止同步 */
@@ -318,7 +320,19 @@ export class FeishuTaskSync {
     }
 
     private async fetchFeishuTasks(): Promise<FeishuTaskRaw[]> {
-        return this.provider.fetchAllFeishuTasks();
+        const allTasks = await this.provider.fetchAllFeishuTasks();
+
+        const selfIds = [this.options.creatorOpenId, this.options.creatorUserId].filter(Boolean);
+        if (selfIds.length > 0) {
+            const filtered = allTasks.filter(task => {
+                const assigneeId = task.assignee?.id;
+                return assigneeId && selfIds.includes(assigneeId);
+            });
+            Logger.info('FeishuTaskSync', `Filtered by assignee: ${filtered.length}/${allTasks.length} tasks belong to current user`);
+            return filtered;
+        }
+
+        return allTasks;
     }
 
     private async fetchObsidianTasks(): Promise<GCTask[]> {
@@ -555,7 +569,6 @@ export class FeishuTaskSync {
             task.priority || 'normal',
             task.dueDate?.getTime() || '0',
             task.startDate?.getTime() || '0',
-            task.feishuDesc || '',
         ];
         return parts.join('|');
     }
@@ -801,7 +814,6 @@ export class FeishuTaskSync {
         const oldGuid = task.feishuGuid;
         await this.updateObsidianTaskLine(task, {
             feishuGuid: null,     // null → 清除 GUID
-            feishuDesc: null,     // null → 清除描述
         });
 
         // 从同步状态中移除
@@ -831,14 +843,12 @@ export class FeishuTaskSync {
             dueDate: updates.dueDate,
             startDate: updates.startDate,
             feishuGuid: updates.feishuGuid ?? undefined,
-            feishuDesc: updates.feishuDesc ?? undefined,
         };
 
         const taskUpdates: TaskUpdates = {
             completed: updates.completed,
             content: updates.description,
             feishuGuid: updates.feishuGuid,
-            feishuDesc: updates.feishuDesc,
             dueDate: updates.dueDate,
             startDate: updates.startDate,
             priority: updates.priority as any,
@@ -878,7 +888,6 @@ export class FeishuTaskSync {
                 completed: updates.completed !== undefined ? updates.completed : task.completed,
                 content: updates.description,
                 feishuGuid: updates.feishuGuid,
-                feishuDesc: updates.feishuDesc,
                 dueDate: updates.dueDate !== undefined ? updates.dueDate : task.dueDate,
                 startDate: updates.startDate !== undefined ? updates.startDate : task.startDate,
                 priority: updates.priority as any,
