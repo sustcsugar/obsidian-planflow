@@ -206,16 +206,23 @@ export class FeishuProvider extends APIDataSource {
 
         const feishuTask = this.toFeishuDTO(dto);
 
+        const task: Record<string, unknown> = {};
+
+        if (feishuTask.summary) task.summary = feishuTask.summary;
+        if (feishuTask.note) task.description = feishuTask.note;
+        if (feishuTask.due) task.due = feishuTask.due;
+        if (feishuTask.priority) task.priority = feishuTask.priority;
+
+        const update_fields = Object.keys(task);
+        if (update_fields.length === 0) {
+            return { success: true };
+        }
+
         try {
             const response = await this.callAPI<FeishuAPIResponse<void>>(
                 `/open-apis/task/v2/tasks/${id}`,
                 'PATCH',
-                {
-                    summary: feishuTask.summary,
-                    note: feishuTask.note,
-                    due: feishuTask.due,
-                    priority: feishuTask.priority,
-                }
+                { update_fields, task }
             );
 
             if (response.code === 0) {
@@ -286,6 +293,12 @@ export class FeishuProvider extends APIDataSource {
             );
 
             if (response.code === 0 && response.data?.items) {
+                // 从 members 数组中提取 assignee（v2 API 不直接返回 assignee 字段）
+                for (const task of response.data.items) {
+                    if (!task.assignee && task.members?.length) {
+                        task.assignee = task.members.find(m => m.role === 'assignee');
+                    }
+                }
                 allTasks.push(...response.data.items);
             } else if (response.code !== 0) {
                 Logger.error('FeishuProvider', `Fetch tasks failed: code=${response.code}, msg=${response.msg}`);
@@ -389,40 +402,43 @@ export class FeishuProvider extends APIDataSource {
     /**
      * 更新飞书任务（同步引擎用）
      *
-     * 使用 v2 API 更新任务。将 FeishuTaskPayload 转换为 v2 合法字段。
+     * 使用 v2 API 更新任务。请求体格式：{ update_fields: [...], task: { ... } }
      */
     async updateFeishuTask(guid: string, payload: FeishuTaskPayload): Promise<void> {
         await this.ensureAccessToken();
 
-        // 构建 v2 API 合法的请求体
-        const body: Record<string, unknown> = {};
+        // 构建 task 子对象（只包含需要更新的字段）
+        const task: Record<string, unknown> = {};
 
-        if (payload.summary) body.summary = payload.summary;
-        if (payload.description) body.description = payload.description;
+        if (payload.summary) task.summary = payload.summary;
+        if (payload.description) task.description = payload.description;
 
-        // v2 API 时间字段使用嵌套对象 { timestamp: "毫秒时间戳" }
         if (payload.due?.timestamp) {
-            body.due = { timestamp: payload.due.timestamp };
+            task.due = { timestamp: payload.due.timestamp };
         }
         if (payload.start?.timestamp) {
-            body.start = { timestamp: payload.start.timestamp };
+            task.start = { timestamp: payload.start.timestamp };
         }
 
-        // v2 完成状态：completed_at（毫秒时间戳），空字符串 = 恢复未完成
+        // completed_at: 毫秒时间戳字符串表示完成，"0" 表示恢复未完成
         if (payload.completed_at !== undefined) {
-            body.completed_at = payload.completed_at;
+            task.completed_at = payload.completed_at;
         }
 
-        // members（负责人）
+        // members 不在 PATCH 范围内（飞书有单独的 update_members API）
         if (payload.assignee) {
-            body.members = [{
-                id: payload.assignee.id,
-                type: 'user',
-                role: 'assignee',
-            }];
+            Logger.warn('FeishuProvider', 'assignee ignored in PATCH; use update_members API separately');
         }
 
-        Logger.info('FeishuProvider', `Updating task ${guid} (v2)`, { fields: Object.keys(body) });
+        const update_fields = Object.keys(task);
+        if (update_fields.length === 0) {
+            Logger.info('FeishuProvider', `No fields to update for task ${guid}, skipping`);
+            return;
+        }
+
+        const body = { update_fields, task };
+
+        Logger.info('FeishuProvider', `Updating task ${guid} (v2)`, { update_fields });
 
         const response = await this.callAPI<FeishuTaskCreateResponse>(
             `/open-apis/task/v2/tasks/${guid}`,
@@ -432,11 +448,21 @@ export class FeishuProvider extends APIDataSource {
 
         if (response.code !== 0) {
             const errMsg = response.msg || 'Unknown error';
-            Logger.error('FeishuProvider', `Update task failed: guid=${guid}, code=${response.code}, msg=${errMsg}`);
+            Logger.error('FeishuProvider', `Update task failed: guid=${guid}, code=${response.code}, msg=${errMsg}`, { requestBody: body });
             throw new Error(`更新飞书任务失败: ${errMsg} (code: ${response.code}, guid: ${guid})`);
         }
 
         Logger.info('FeishuProvider', `Task updated: guid=${guid}`);
+    }
+
+    /**
+     * 验证飞书授权是否有效（同步前调用）
+     *
+     * 检查 token 是否过期，如果过期则尝试刷新。
+     * 刷新失败时抛出明确错误，供调用方提示用户重新授权。
+     */
+    async validateAuth(): Promise<void> {
+        await this.ensureAccessToken();
     }
 
     /**
@@ -530,34 +556,48 @@ export class FeishuProvider extends APIDataSource {
         await this.ensureAccessToken();
 
         const url = `https://open.feishu.cn${path}`;
+        const maxRetries = 2;
 
-        const response = await requestUrl({
-            url,
-            method,
-            headers: {
-                'Authorization': `Bearer ${this.oauthConfig.accessToken}`,
-                'Content-Type': 'application/json',
-            },
-            body: body ? JSON.stringify(body) : undefined,
-            throw: false,
-        });
-
-        if (response.status >= 400) {
-            const feishuMsg = response.json?.msg || '';
-            const feishuCode = response.json?.code || '';
-            const errMsg = feishuMsg
-                ? `Feishu API ${response.status}: code=${feishuCode}, msg=${feishuMsg}`
-                : `Feishu API ${response.status}: ${response.text?.substring(0, 200)}`;
-            Logger.error('FeishuProvider', `API error: ${method} ${path}`, {
-                status: response.status,
-                feishuCode,
-                feishuMsg,
-                requestBody: body,
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            const response = await requestUrl({
+                url,
+                method,
+                headers: {
+                    'Authorization': `Bearer ${this.oauthConfig.accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: body ? JSON.stringify(body) : undefined,
+                throw: false,
             });
-            throw new Error(errMsg);
+
+            // 5xx 服务端错误自动重试（最多 maxRetries 次）
+            if (response.status >= 500 && attempt < maxRetries) {
+                const delay = 1000 * (attempt + 1);
+                Logger.warn('FeishuProvider', `API ${response.status} on attempt ${attempt + 1}, retrying in ${delay}ms...`, { path, method });
+                await new Promise(r => setTimeout(r, delay));
+                continue;
+            }
+
+            if (response.status >= 400) {
+                const feishuMsg = response.json?.msg || '';
+                const feishuCode = response.json?.code || '';
+                const errMsg = feishuMsg
+                    ? `Feishu API ${response.status}: code=${feishuCode}, msg=${feishuMsg}`
+                    : `Feishu API ${response.status}: ${response.text?.substring(0, 200)}`;
+                Logger.error('FeishuProvider', `API error: ${method} ${path}`, {
+                    status: response.status,
+                    feishuCode,
+                    feishuMsg,
+                    requestBody: body,
+                });
+                throw new Error(errMsg);
+            }
+
+            return response.json;
         }
 
-        return response.json;
+        // 理论上不会到达此处（for 循环内部会 return 或 throw）
+        throw new Error('Feishu API: max retries exceeded');
     }
 
     /**

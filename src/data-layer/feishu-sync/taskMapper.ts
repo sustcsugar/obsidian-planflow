@@ -7,6 +7,7 @@
 
 import type { GCTask } from '../../types';
 import type { FeishuTask, FeishuTaskTime } from '../sources/api/providers/feishu/FeishuTypes';
+import { RegularExpressions } from '../../utils/RegularExpressions';
 
 /** 飞书任务 API 的 create/update 请求体 */
 export interface FeishuTaskPayload {
@@ -16,7 +17,7 @@ export interface FeishuTaskPayload {
     start?: { timestamp?: string; is_all_day?: boolean };
     priority?: string;
     completed?: boolean;
-    completed_at?: string;  // v2 API 完成时间（毫秒时间戳字符串），空字符串表示恢复未完成
+    completed_at?: string;  // v2 API 完成时间（毫秒时间戳字符串），"0" 表示恢复未完成
     assignee?: { id: string; type: string };
 }
 
@@ -31,9 +32,9 @@ export interface FeishuTaskPayload {
 export function toFeishuTaskPayload(task: GCTask): FeishuTaskPayload {
     const payload: FeishuTaskPayload = {};
 
-    // summary ↔ description (1:1 mapping, preserve original content for round-trip)
+    // summary ↔ description (strip markdown links / wikilinks to avoid Feishu URL validation errors)
     if (task.description) {
-        payload.summary = task.description;
+        payload.summary = sanitizeSummary(task.description);
     }
 
     // dueDate → due
@@ -196,4 +197,19 @@ export function feishuTimestampToDate(timestamp: string): Date | undefined {
 export function feishuTimeToDate(time?: FeishuTaskTime): Date | undefined {
     if (!time?.timestamp) return undefined;
     return feishuTimestampToDate(time.timestamp);
+}
+
+/**
+ * 清理任务描述，移除飞书 API 不接受的 URL 格式
+ *
+ * 剥离 markdown 链接 `[text](url)` → `text`，
+ * 剥离 wikilink `[[note]]` → `note`，
+ * 避免飞书因 zotero://、obsidian://、file:/// 等 scheme 报错。
+ */
+function sanitizeSummary(description: string): string {
+    const { stripMarkdownLink, stripWikilink } = RegularExpressions.FeishuSummarySanitize;
+    return description
+        .replace(stripMarkdownLink, '$1')
+        .replace(stripWikilink, '$1')
+        .trim();
 }

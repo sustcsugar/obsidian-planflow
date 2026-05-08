@@ -320,18 +320,10 @@ export class FeishuTaskSync {
     }
 
     private async fetchFeishuTasks(): Promise<FeishuTaskRaw[]> {
+        // 返回全部飞书任务（用于 GUID 匹配，防止重复创建）
+        // pull 操作的过滤在 detectChanges 中按变更类型处理
         const allTasks = await this.provider.fetchAllFeishuTasks();
-
-        const selfIds = [this.options.creatorOpenId, this.options.creatorUserId].filter(Boolean);
-        if (selfIds.length > 0) {
-            const filtered = allTasks.filter(task => {
-                const assigneeId = task.assignee?.id;
-                return assigneeId && selfIds.includes(assigneeId);
-            });
-            Logger.info('FeishuTaskSync', `Filtered by assignee: ${filtered.length}/${allTasks.length} tasks belong to current user`);
-            return filtered;
-        }
-
+        Logger.info('FeishuTaskSync', `Fetched ${allTasks.length} Feishu tasks (all, for matching)`);
         return allTasks;
     }
 
@@ -460,6 +452,16 @@ export class FeishuTaskSync {
     /**
      * 标题相似度（基于公共子串）
      */
+    /**
+     * 判断飞书任务是否属于当前用户（用于过滤 pull 操作）
+     */
+    private isSelfTask(feishu: FeishuTaskRaw): boolean {
+        const selfIds = [this.options.creatorOpenId, this.options.creatorUserId].filter(Boolean);
+        if (selfIds.length === 0) return true; // 未配置用户信息时不过滤
+        const assigneeId = feishu.assignee?.id;
+        return !!assigneeId && selfIds.includes(assigneeId);
+    }
+
     private titleSimilarity(a: string, b: string): number {
         if (!a || !b) return 0;
         if (a === b) return 1;
@@ -498,6 +500,10 @@ export class FeishuTaskSync {
                     change = this.detectMatchedChange(match);
                     break;
                 case 'feishu-only':
+                    // 仅拉取当前用户的任务，跳过他人的任务
+                    if (match.feishuTask && !this.isSelfTask(match.feishuTask)) {
+                        break;
+                    }
                     change = { type: 'pull-create', feishuTask: match.feishuTask };
                     break;
                 case 'orphaned':
@@ -671,9 +677,9 @@ export class FeishuTaskSync {
     ): Promise<void> {
         const payload = toFeishuTaskPayload(task);
 
-        // 同步完成状态：v2 API 使用 completed_at（毫秒时间戳），空字符串表示恢复未完成
+        // 同步完成状态：v2 API 使用 completed_at（毫秒时间戳），"0" 表示恢复未完成
         if (feishu.completed !== task.completed) {
-            payload.completed_at = task.completed ? String(task.completionDate?.getTime() || Date.now()) : '';
+            payload.completed_at = task.completed ? String(task.completionDate?.getTime() || Date.now()) : '0';
         }
 
         if (Object.keys(payload).length === 0) {

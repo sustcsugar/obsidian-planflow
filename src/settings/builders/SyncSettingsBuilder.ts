@@ -564,7 +564,11 @@ export class SyncSettingsBuilder extends BaseBuilder {
 		} catch (error) {
 			const errorMsg = error instanceof Error ? error.message : String(error);
 			Logger.error('SyncSettingsBuilder', 'Authorization failed', error);
-			new Notice('授权失败: ' + errorMsg);
+			if (errorMsg.includes('过期') || errorMsg.includes('invalid_grant')) {
+				new Notice('授权码已过期，请重新点击授权按钮（授权码有效期约 5 分钟）', 8000);
+			} else {
+				new Notice('授权失败: ' + errorMsg, 8000);
+			}
 		}
 	}
 
@@ -1005,7 +1009,7 @@ export class SyncSettingsBuilder extends BaseBuilder {
 
 	// ==================== 同步操作 ====================
 
-	private async runManualSync(): Promise<void> {
+		private async runManualSync(): Promise<void> {
 		try {
 			const syncConfig = this.getSyncConfiguration();
 			const apiConfig = syncConfig.api;
@@ -1023,16 +1027,7 @@ export class SyncSettingsBuilder extends BaseBuilder {
 				return;
 			}
 
-			const controller = new AbortController();
-			const progressNotice = new Notice('🔄 正在同步飞书任务...', 0);
-			const stopBtn = progressNotice.noticeEl.createEl('button', { text: '停止同步' });
-			stopBtn.style.cssText = 'margin-left:12px;padding:2px 10px;cursor:pointer;';
-			stopBtn.onclick = () => {
-				controller.abort();
-				stopBtn.disabled = true;
-				stopBtn.textContent = '已停止';
-			};
-
+			// 第一步：验证授权有效性（token 过期时尝试刷新，刷新失败则立即提示，不创建任何 UI）
 			const provider = new FeishuProvider({
 				enabled: true,
 				syncDirection: syncConfig.syncDirection,
@@ -1050,6 +1045,24 @@ export class SyncSettingsBuilder extends BaseBuilder {
 				},
 			});
 
+			try {
+				await provider.validateAuth();
+			} catch (authError) {
+				new Notice('飞书授权已失效，请重新授权', 8000);
+				return;
+			}
+
+			// 授权有效，开始同步流程
+			const controller = new AbortController();
+			const progressNotice = new Notice('🔄 正在同步飞书任务...', 0);
+			const stopBtn = progressNotice.noticeEl.createEl('button', { text: '停止同步' });
+			stopBtn.style.cssText = 'margin-left:12px;padding:2px 10px;cursor:pointer;';
+			stopBtn.onclick = () => {
+				controller.abort();
+				stopBtn.disabled = true;
+				stopBtn.textContent = '已停止';
+			};
+
 			const stateManager = new SyncStateManager(this.plugin.app);
 			const syncEngine = new FeishuTaskSync(this.plugin.app, provider, stateManager, {
 				conflictStrategy: syncConfig.conflictResolution as 'newest-win' | 'local-win' | 'remote-win' || 'newest-win',
@@ -1057,11 +1070,13 @@ export class SyncSettingsBuilder extends BaseBuilder {
 				enabledFormats: (this.plugin.settings.enabledTaskFormats as ('tasks' | 'dataview')[]) || ['tasks', 'dataview'],
 				globalFilter: this.plugin.settings.globalTaskFilter,
 				pushFilter: syncConfig.pushFilter as PushFilterConfig,
-				abortSignal: controller.signal,
+								tasklistGuid: apiConfig.tasklistGuid,
+				creatorOpenId: apiConfig.userOpenId,
+				creatorUserId: apiConfig.userId,
+abortSignal: controller.signal,
 				onProgress: (msg: string) => {
 					const btnHtml = stopBtn.disabled ? '' : '<button style="margin-left:12px;padding:2px 10px;cursor:pointer;" onclick="this.previousElementSibling?.click()">停止同步</button>';
 					progressNotice.noticeEl.innerHTML = '<span>' + msg + '</span>' + btnHtml;
-					// 重新绑定停止按钮
 					const newBtn = progressNotice.noticeEl.querySelector('button');
 					if (newBtn && !controller.signal.aborted) {
 						newBtn.onclick = () => {
@@ -1135,7 +1150,14 @@ export class SyncSettingsBuilder extends BaseBuilder {
 					clientSecret,
 					redirectUri: apiConfig.redirectUri,
 				},
-			});
+		});
+
+			try {
+				await provider.validateAuth();
+			} catch (authError) {
+				new Notice('飞书授权已失效，请重新授权', 8000);
+				return;
+			}
 
 			const stateManager = new SyncStateManager(this.plugin.app);
 			const syncEngine = new FeishuTaskSync(this.plugin.app, provider, stateManager, {
