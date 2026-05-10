@@ -42,7 +42,7 @@ interface FeishuAPIResponse<T> {
 /**
  * 配置更新事件数据
  */
-interface ConfigUpdateData {
+export interface ConfigUpdateData {
     accessToken?: string;
     refreshToken?: string;
     tokenExpireAt?: number;

@@ -7,7 +7,7 @@ import { FeishuHttpClient } from '../../data-layer/sources/api/providers/feishu/
 import { FeishuUserApi } from '../../data-layer/sources/api/providers/feishu/FeishuUserApi';
 import { FeishuTaskApi } from '../../data-layer/sources/api/providers/feishu/FeishuTaskApi';
 import type { FeishuTaskList } from '../../data-layer/sources/api/providers/feishu/FeishuTypes';
-import { FeishuProvider } from '../../data-layer/sources/api/providers/FeishuProvider';
+import { FeishuProvider, ConfigUpdateData } from '../../data-layer/sources/api/providers/FeishuProvider';
 import { FeishuTaskSync } from '../../data-layer/feishu-sync/FeishuTaskSync';
 import { SyncStateManager } from '../../data-layer/feishu-sync/syncState';
 import { Logger } from '../../utils/logger';
@@ -993,6 +993,16 @@ export class SyncSettingsBuilder extends BaseBuilder {
 				},
 		});
 
+			provider.setConfigUpdateCallback(async (data: ConfigUpdateData) => {
+				const api = syncConfig.api;
+				if (api) {
+					if (data.accessToken) api.accessToken = data.accessToken;
+					if (data.refreshToken) api.refreshToken = data.refreshToken;
+					if (data.tokenExpireAt) api.tokenExpireAt = data.tokenExpireAt;
+				}
+				await this.plugin.saveSettings();
+			});
+
 			try {
 				await provider.validateAuth();
 			} catch (authError) {
@@ -1132,6 +1142,16 @@ export class SyncSettingsBuilder extends BaseBuilder {
 				},
 			});
 
+			provider.setConfigUpdateCallback(async (data: ConfigUpdateData) => {
+				const api = syncConfig.api;
+				if (api) {
+					if (data.accessToken) api.accessToken = data.accessToken;
+					if (data.refreshToken) api.refreshToken = data.refreshToken;
+					if (data.tokenExpireAt) api.tokenExpireAt = data.tokenExpireAt;
+				}
+				await this.plugin.saveSettings();
+			});
+
 			new Notice('正在向「' + tasklistName + '」创建虚拟任务...', 5000);
 
 			let created = 0;
@@ -1226,6 +1246,16 @@ export class SyncSettingsBuilder extends BaseBuilder {
 					clientSecret,
 					redirectUri: apiConfig.redirectUri,
 				},
+			});
+
+			provider.setConfigUpdateCallback(async (data: ConfigUpdateData) => {
+				const api = syncConfig.api;
+				if (api) {
+					if (data.accessToken) api.accessToken = data.accessToken;
+					if (data.refreshToken) api.refreshToken = data.refreshToken;
+					if (data.tokenExpireAt) api.tokenExpireAt = data.tokenExpireAt;
+				}
+				await this.plugin.saveSettings();
 			});
 
 			let deleted = 0;
