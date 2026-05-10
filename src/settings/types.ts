@@ -129,7 +129,8 @@ export interface GanttCalendarSettings {
 			// Token
 			accessToken?: string;
 			refreshToken?: string;
-			tokenExpireAt?: number;      // token 过期时间戳
+			tokenExpireAt?: number;           // access_token 过期时间戳
+			refreshTokenExpireAt?: number;    // refresh_token 过期时间戳
 
 			// 用户信息
 			userId?: string;

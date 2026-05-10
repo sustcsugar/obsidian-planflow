@@ -98,6 +98,7 @@ export async function syncFeishuTasks(plugin: GanttCalendarPlugin): Promise<void
 		}
 
 		// 授权有效，开始同步流程
+		plugin.setSyncStatus('🔄 同步中...');
 		const controller = new AbortController();
 		const progressNotice = new Notice('🔄 正在同步飞书任务...', 0);
 		const stopBtn = progressNotice.noticeEl.createEl('button', { text: '停止同步' });
@@ -136,6 +137,17 @@ abortSignal: controller.signal,
 
 		progressNotice.hide();
 
+		// 状态栏显示同步结果，10 秒后恢复就绪
+		if (result.errors.length > 0) {
+			plugin.setSyncStatus('❌ 同步失败');
+		} else {
+			const parts_status: string[] = [];
+			if (result.pushed > 0) parts_status.push(result.pushed + ' 推送');
+			if (result.pulled > 0) parts_status.push(result.pulled + ' 拉取');
+			plugin.setSyncStatus('✅ 已同步' + (parts_status.length > 0 ? ' ' + parts_status.join(' ') : ''));
+		}
+		setTimeout(() => plugin.clearSyncStatus(), 10000);
+
 		const parts: string[] = [];
 		if (result.pushed > 0) parts.push('推送 ' + result.pushed + ' 个');
 		if (result.pulled > 0) parts.push('拉取 ' + result.pulled + ' 个');
@@ -151,5 +163,7 @@ abortSignal: controller.signal,
 	} catch (error) {
 		const errorMsg = error instanceof Error ? error.message : String(error);
 		new Notice('同步出错: ' + errorMsg);
+		plugin.setSyncStatus('❌ 同步失败');
+		setTimeout(() => plugin.clearSyncStatus(), 10000);
 	}
 }

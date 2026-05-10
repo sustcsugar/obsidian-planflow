@@ -72,7 +72,8 @@ export interface FeishuTokenResponseV2 {
     error_description?: string;
     access_token?: string;
     refresh_token?: string;
-    expires_in?: number;
+    expires_in?: number;               // access_token 有效期（秒，通常 7200）
+    refresh_token_expires_in?: number; // refresh_token 有效期（秒，通常 2592000 = 30天）
     token_type?: string;
     scope?: string;
 }

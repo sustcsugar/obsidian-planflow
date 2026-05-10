@@ -463,7 +463,25 @@ export class SyncSettingsBuilder extends BaseBuilder {
 			}
 		}
 
-		// 取消授权
+		
+			// Refresh 令牌状态
+			if (syncConfig.api?.refreshToken) {
+				addSetting(setting => {
+					const hasExpireAt = !!syncConfig.api?.refreshTokenExpireAt;
+					const isExpired = hasExpireAt && Date.now() > syncConfig.api.refreshTokenExpireAt;
+					const desc = hasExpireAt
+						? (isExpired
+							? 'Refresh 令牌已过期，请重新授权'
+							: `过期时间: ${new Date(syncConfig.api.refreshTokenExpireAt).toLocaleString()} (${FeishuOAuth.formatExpireTime(syncConfig.api.refreshTokenExpireAt)})`)
+						: '过期时间未知（重新授权后可显示）';
+					setting.setName('Refresh 令牌状态')
+						.setDesc(desc)
+						.addExtraButton(button => button
+							.setIcon(isExpired ? 'alert-triangle' : (hasExpireAt ? 'check-circle' : 'info'))
+							.setTooltip(isExpired ? '已过期' : (hasExpireAt ? '有效' : '时间未知')));
+				});
+			}
+			// 取消授权
 		if (isConnected) {
 			addSetting(setting =>
 				setting.setName('取消授权')
@@ -545,6 +563,9 @@ export class SyncSettingsBuilder extends BaseBuilder {
 				accessToken: tokenResponse.access_token,
 				refreshToken: tokenResponse.refresh_token,
 				tokenExpireAt: tokenExpireAt,
+				refreshTokenExpireAt: tokenResponse.refresh_token_expires_in
+					? Date.now() + tokenResponse.refresh_token_expires_in * 1000
+					: undefined,
 			};
 
 			try {
@@ -614,6 +635,9 @@ export class SyncSettingsBuilder extends BaseBuilder {
 					accessToken: tokenResponse.access_token,
 					refreshToken: tokenResponse.refresh_token || refreshToken,
 					tokenExpireAt: tokenExpireAt,
+					refreshTokenExpireAt: tokenResponse.refresh_token_expires_in
+						? Date.now() + tokenResponse.refresh_token_expires_in * 1000
+						: apiConfig.refreshTokenExpireAt,
 				}
 			});
 
