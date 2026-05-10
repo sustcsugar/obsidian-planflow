@@ -78,6 +78,18 @@ export async function syncFeishuTasks(plugin: GanttCalendarPlugin): Promise<void
 			},
 		});
 
+		// token 刷新后持久化回 settings
+		const currentSyncConfig = syncConfig;
+		provider.setConfigUpdateCallback(async (data) => {
+			const api = currentSyncConfig.api;
+			if (api) {
+				if (data.accessToken) api.accessToken = data.accessToken;
+				if (data.refreshToken) api.refreshToken = data.refreshToken;
+				if (data.tokenExpireAt) api.tokenExpireAt = data.tokenExpireAt;
+			}
+			await plugin.saveSettings();
+		});
+
 		try {
 			await provider.validateAuth();
 		} catch (authError) {

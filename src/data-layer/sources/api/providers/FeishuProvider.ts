@@ -5,7 +5,7 @@
  * API 文档: https://open.feishu.cn/document/server-docs/docs/task-v1/task-list
  */
 
-import { requestUrl } from 'obsidian';
+import { requestUrl, Notice } from 'obsidian';
 import { APIDataSource, APIResponse, APITaskDTO } from '../APIDataSource';
 import type { DataSourceConfig } from '../../../types';
 import { Logger } from '../../../../utils/logger';
@@ -42,7 +42,7 @@ interface FeishuAPIResponse<T> {
 /**
  * 配置更新事件数据
  */
-interface ConfigUpdateData {
+export interface ConfigUpdateData {
     accessToken?: string;
     refreshToken?: string;
     tokenExpireAt?: number;
@@ -518,6 +518,7 @@ export class FeishuProvider extends APIDataSource {
                     this.tokenExpireAt = now + (expiresIn - 60) * 1000; // 提前1分钟过期
 
                     Logger.info('FeishuProvider', 'Token refreshed successfully');
+                    new Notice('飞书授权已自动续期', 3000);
 
                     // 通知外部更新配置
                     this.notifyConfigUpdate();
