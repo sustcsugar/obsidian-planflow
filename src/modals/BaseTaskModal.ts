@@ -1045,6 +1045,9 @@ export abstract class BaseTaskModal extends Modal {
 			.${EditTaskModalClasses.block} {
 				width: 100%;
 			}
+			.modal:has(.gc-edit-task-modal) {
+				width: 700px;
+			}
 
 			/* 滚动容器 - 使用负边距让滚动条贴到模态框右边缘 */
 			.${EditTaskModalClasses.elements.scrollContainer} {
@@ -1146,8 +1149,8 @@ export abstract class BaseTaskModal extends Modal {
 			/* 日期板块 */
 			.${EditTaskModalClasses.elements.datesGrid} {
 				display: grid;
-				grid-template-columns: repeat(2, 1fr);
-				gap: 12px;
+				grid-template-columns: repeat(3, 1fr);
+				gap: 10px;
 			}
 			.${EditTaskModalClasses.elements.dateItem} {
 				display: flex;
