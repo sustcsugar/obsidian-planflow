@@ -31,9 +31,11 @@ export class DailyTimelineTab {
 	}
 
 	refresh(container: HTMLElement): void {
+		const savedScrollTop = container.scrollTop;
 		this.destroyCards();
 		container.empty();
 		this.renderTimeline(container);
+		container.scrollTop = savedScrollTop;
 	}
 
 	cleanup(): void {
