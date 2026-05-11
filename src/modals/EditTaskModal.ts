@@ -7,7 +7,7 @@
  * @module modals/EditTaskModal
  */
 
-import { App, Notice } from 'obsidian';
+import { App, Notice, setIcon } from 'obsidian';
 import type { GCTask } from '../types';
 import { updateTaskProperties } from '../tasks/taskUpdater';
 import { Logger } from '../utils/logger';
@@ -269,16 +269,45 @@ class EditTaskModal extends BaseTaskModal {
 
 		const repeatContainer = section.createDiv(EditTaskModalClasses.elements.repeatSection);
 
-		// 标题行：左侧标签 + 右侧清除按钮
+		// 可点击的折叠标题行
 		const headerRow = repeatContainer.createDiv();
 		headerRow.style.display = 'flex';
 		headerRow.style.justifyContent = 'space-between';
 		headerRow.style.alignItems = 'center';
-		headerRow.style.marginBottom = '12px';
+		headerRow.style.cursor = 'pointer';
+		headerRow.style.padding = '4px 0';
 
-		headerRow.createEl('label', {
+		const headerLeft = headerRow.createDiv();
+		headerLeft.style.display = 'flex';
+		headerLeft.style.alignItems = 'center';
+		headerLeft.style.gap = '8px';
+
+		const toggleIcon = headerLeft.createEl('span');
+		toggleIcon.style.transition = 'transform 0.2s ease';
+		setIcon(toggleIcon, 'chevron-right');
+
+		headerLeft.createEl('label', {
 			text: '重复设置',
 			cls: EditTaskModalClasses.elements.sectionLabel
+		});
+		headerLeft.querySelector('label')!.style.marginBottom = '0';
+
+		const repeatSummary = headerLeft.createEl('span', {
+			text: '不重复',
+		});
+		repeatSummary.style.fontSize = 'var(--font-ui-smaller)';
+		repeatSummary.style.color = 'var(--text-muted)';
+
+		let isExpanded = false;
+		const repeatGrid = repeatContainer.createDiv(EditTaskModalClasses.elements.repeatGrid);
+		repeatGrid.style.display = 'none';
+
+		headerRow.addEventListener('click', (e) => {
+			if ((e.target as HTMLElement).tagName === 'BUTTON') return;
+			isExpanded = !isExpanded;
+			repeatGrid.style.display = isExpanded ? 'block' : 'none';
+			toggleIcon.style.transform = isExpanded ? 'rotate(90deg)' : '';
+			headerRow.style.marginBottom = isExpanded ? '12px' : '0';
 		});
 
 		const clearBtn = headerRow.createEl('button', {
@@ -288,9 +317,7 @@ class EditTaskModal extends BaseTaskModal {
 		clearBtn.style.padding = '2px 8px';
 		clearBtn.style.fontSize = 'var(--font-ui-smaller)';
 		clearBtn.style.color = 'var(--text-muted)';
-
-		const repeatGrid = repeatContainer.createDiv(EditTaskModalClasses.elements.repeatGrid);
-
+		clearBtn.style.display = 'none';
 		// ========== 频率选择行：每 [间隔输入] [单位下拉] [自定义输入] ==========
 		const freqSelectRow = repeatGrid.createDiv(EditTaskModalClasses.elements.repeatRow);
 		freqSelectRow.style.display = 'flex';
@@ -496,6 +523,20 @@ class EditTaskModal extends BaseTaskModal {
 		const updateRepeat = () => {
 			this.repeatChanged = true;
 
+			// Update collapsible header summary
+			const freqLabels: Record<string,string> = {
+				daily: '每天', weekly: '每周', monthly: '每月', yearly: '每年', custom: '自定义'
+			};
+			if (!freqSelect.value) {
+				repeatSummary.textContent = '不重复';
+				clearBtn.style.display = 'none';
+			} else {
+				const interval = parseInt(intervalInput.value) || 1;
+				const label = freqLabels[freqSelect.value] || freqSelect.value;
+				repeatSummary.textContent = interval > 1 ? `每 ${interval} ${label}` : label;
+				clearBtn.style.display = '';
+			}
+
 			const freqValue = freqSelect.value;
 			const interval = parseInt(intervalInput.value) || 1;
 
@@ -634,6 +675,8 @@ class EditTaskModal extends BaseTaskModal {
 			this.repeat = null;
 			previewText.textContent = 'no repeat';
 			errorMsg.style.display = 'none';
+				repeatSummary.textContent = '不重复';
+				clearBtn.style.display = 'none';
 		});
 
 		// 初始化当前值

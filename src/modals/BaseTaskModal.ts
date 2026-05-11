@@ -12,7 +12,8 @@
  * @module modals/BaseTaskModal
  */
 
-import { App, Modal } from 'obsidian';
+import { App, Modal, setIcon } from 'obsidian';
+import flatpickr from 'flatpickr';
 import type { GCTask } from '../types';
 import { EditTaskModalClasses } from '../utils/bem';
 import { TagSelector } from '../components/TagSelector';
@@ -56,6 +57,7 @@ export abstract class BaseTaskModal extends Modal {
 	protected cancelledDate: Date | null = null;
 	protected completionDate: Date | null = null;
 	protected datePrecision: Record<string, 'day' | 'time'> = {};
+		protected flatpickrInstances: any[] = [];
 	protected selectedTags: string[] = [];
 	protected tagSelector: TagSelector;
 
@@ -137,6 +139,10 @@ export abstract class BaseTaskModal extends Modal {
 	 */
 	protected renderModalContent(title: string): void {
 		const { contentEl } = this;
+		// 清理 flatpickr 实例
+		this.flatpickrInstances.forEach(fp => fp.destroy());
+		this.flatpickrInstances = [];
+
 		contentEl.empty();
 		contentEl.addClass(EditTaskModalClasses.block);
 
@@ -244,163 +250,135 @@ export abstract class BaseTaskModal extends Modal {
 		this.renderDateField(datesGrid, '❌ 取消', this.cancelledDate, (d) => this.cancelledDate = d, 'cancelledDate');
 	}
 
-	/**
-	 * 渲染单个日期字段（日期与时间分离为独立输入框）
-	 */
-	protected renderDateField(
-		container: HTMLElement,
-		label: string,
-		current: Date | null,
-		onChange: (d: Date | null) => void,
-		fieldKey?: string
-	): void {
-		const dateItem = container.createDiv(EditTaskModalClasses.elements.dateItem);
-		dateItem.createEl('label', {
-			text: label,
-			cls: EditTaskModalClasses.elements.dateLabel
-		});
+		/**
+		 * 渲染单个日期字段（Flatpickr 日期+时间一体化）
+		 */
+		protected renderDateField(
+			container: HTMLElement,
+			label: string,
+			current: Date | null,
+			onChange: (d: Date | null) => void,
+			fieldKey?: string
+		): void {
+			const dateItem = container.createDiv(EditTaskModalClasses.elements.dateItem);
+			dateItem.createEl('label', {
+				text: label,
+				cls: EditTaskModalClasses.elements.dateLabel
+			});
 
-		const initialPrecision = fieldKey ? (this.datePrecision[fieldKey] || 'day') : 'day';
-		const isTimePrecision = initialPrecision === 'time';
+			const inputRow = dateItem.createDiv(EditTaskModalClasses.elements.dateInputContainer);
 
-		// ---- 日期行 ----
-		const dateRow = dateItem.createDiv(EditTaskModalClasses.elements.dateInputContainer);
-		const dateInput = dateRow.createEl('input', {
-			type: 'date',
-			cls: EditTaskModalClasses.elements.dateInput
-		});
-		if (current) {
-			dateInput.value = this.formatDateForInput(current);
-		}
+			// 日期+时间输入框（Flatpickr 挂载点）
+			const dateWrapper = inputRow.createDiv();
+			dateWrapper.style.position = 'relative';
 
-		// 日期清空按钮（清除日期+时间）
-		const dateClearBtn = dateRow.createEl('button', {
-			cls: EditTaskModalClasses.elements.dateClear,
-			text: '×'
-		});
+			const dateInput = dateWrapper.createEl('input', {
+				type: 'text',
+				cls: EditTaskModalClasses.elements.dateInput,
+				attr: { readonly: 'true', placeholder: '选择日期和时间' }
+			});
+			dateInput.style.cursor = 'pointer';
 
-		// ---- 时间行 ----
-		const timeRow = dateItem.createDiv(EditTaskModalClasses.elements.dateInputContainer);
-		timeRow.style.display = isTimePrecision ? 'flex' : 'none';
+			// 清除按钮
+			const dateClearBtn = dateWrapper.createEl('button', {
+				cls: EditTaskModalClasses.elements.dateClear,
+				text: '×'
+			});
+			dateClearBtn.style.position = 'absolute';
+			dateClearBtn.style.right = '2px';
+			dateClearBtn.style.top = '50%';
+			dateClearBtn.style.transform = 'translateY(-50%)';
 
-		const timeInput = timeRow.createEl('input', {
-			type: 'time',
-			cls: EditTaskModalClasses.elements.dateInput
-		});
-		if (current && isTimePrecision) {
-			timeInput.value = this.formatTimeForInput(current);
-		}
+			// Flatpickr 实例
+			const fpInstance = flatpickr(dateInput, {
+				enableTime: true,
+				dateFormat: 'Y-m-d H:i',
+				time_24hr: true,
+				allowInput: false,
+				clickOpens: true,
+				defaultDate: current || undefined,
+				minuteIncrement: 1,
+				onChange: (selectedDates: Date[]) => {
+					if (selectedDates.length === 0) {
+						onChange(null);
+						if (fieldKey) this.datePrecision[fieldKey] = 'day';
+					} else {
+						const date = selectedDates[0];
+						const hasTime = date.getHours() !== 0 || date.getMinutes() !== 0;
+						if (fieldKey) this.datePrecision[fieldKey] = hasTime ? 'time' : 'day';
+						onChange(date);
+					}
+				},
+				onOpen: () => {
+					dateClearBtn.style.opacity = '0';
+				},
+				onClose: () => {
+					dateClearBtn.style.opacity = '';
+				},
+			});
 
-		// 时间清空按钮（只清除时间）
-		const timeClearBtn = timeRow.createEl('button', {
-			cls: EditTaskModalClasses.elements.dateClear,
-			text: '×'
-		});
+			this.flatpickrInstances.push(fpInstance);
 
-		// ---- "+ 添加时间" 链接 ----
-		const addTimeLink = dateItem.createEl('span', {
-			cls: EditTaskModalClasses.elements.dateAddTime,
-			text: '+ 添加时间'
-		});
-		addTimeLink.style.display = isTimePrecision ? 'none' : '';
-
-		// ---- 辅助函数 ----
-		const buildDate = (): Date | null => {
-			const dateVal = dateInput.value;
-			if (!dateVal) return null;
-			const timeVal = timeInput.value;
-			if (timeVal) {
-				return this.parseDate(dateVal + 'T' + timeVal);
-			}
-			return this.parseDate(dateVal);
-		};
-
-		const notifyChange = () => {
-			onChange(buildDate());
-		};
-
-		// ---- 事件处理 ----
-
-		// 日期变更
-		dateInput.addEventListener('change', () => {
-			if (!dateInput.value) {
+			// 清除按钮
+			dateClearBtn.addEventListener('click', (e) => {
+				e.stopPropagation();
+				fpInstance.clear();
 				onChange(null);
 				if (fieldKey) this.datePrecision[fieldKey] = 'day';
-				return;
-			}
-			if (fieldKey) {
-				this.datePrecision[fieldKey] = timeInput.value ? 'time' : 'day';
-			}
-			notifyChange();
-		});
+			});
+		}
 
-		// 时间变更
-		timeInput.addEventListener('change', () => {
-			if (fieldKey) {
-				this.datePrecision[fieldKey] = timeInput.value ? 'time' : 'day';
-			}
-			if (dateInput.value) {
-				notifyChange();
-			}
-		});
-
-		// 点击"+ 添加时间"
-		addTimeLink.addEventListener('click', () => {
-			if (!fieldKey) return;
-			this.datePrecision[fieldKey] = 'time';
-			timeRow.style.display = 'flex';
-			addTimeLink.style.display = 'none';
-			if (!timeInput.value) {
-				timeInput.value = '00:00';
-			}
-			timeInput.focus();
-			if (dateInput.value) {
-				notifyChange();
-			}
-		});
-
-		// 日期清空：清除日期和时间
-		dateClearBtn.addEventListener('click', () => {
-			dateInput.value = '';
-			timeInput.value = '';
-			onChange(null);
-			if (fieldKey) this.datePrecision[fieldKey] = 'day';
-			timeRow.style.display = 'none';
-			addTimeLink.style.display = '';
-		});
-
-		// 时间清空：只清除时间，保留日期
-		timeClearBtn.addEventListener('click', () => {
-			timeInput.value = '';
-			if (fieldKey) this.datePrecision[fieldKey] = 'day';
-			addTimeLink.style.display = '';
-			timeRow.style.display = 'none';
-			if (dateInput.value) {
-				notifyChange();
-			}
-		});
-	}
-
-	// ==================== 周期设置板块 ====================
+		// ==================== 周期设置板块 ====================
 
 	/**
 	 * 渲染周期设置板块
 	 */
 	protected renderRepeatSection(container: HTMLElement): void {
 		const section = container.createDiv(EditTaskModalClasses.elements.section);
+		section.style.marginBottom = "16px";
 
 		const repeatContainer = section.createDiv(EditTaskModalClasses.elements.repeatSection);
 
-		// 标题行：左侧标签 + 右侧清除按钮
+		// 可点击的折叠标题行
 		const headerRow = repeatContainer.createDiv();
 		headerRow.style.display = 'flex';
 		headerRow.style.justifyContent = 'space-between';
 		headerRow.style.alignItems = 'center';
-		headerRow.style.marginBottom = '12px';
+		headerRow.style.cursor = 'pointer';
+		headerRow.style.padding = '4px 0';
 
-		headerRow.createEl('label', {
+		const headerLeft = headerRow.createDiv();
+		headerLeft.style.display = 'flex';
+		headerLeft.style.alignItems = 'center';
+		headerLeft.style.gap = '8px';
+
+		const toggleIcon = headerLeft.createEl('span');
+		toggleIcon.style.transition = 'transform 0.2s ease';
+		setIcon(toggleIcon, 'chevron-right');
+
+		headerLeft.createEl('label', {
 			text: '重复设置',
 			cls: EditTaskModalClasses.elements.sectionLabel
+		});
+		headerLeft.querySelector('label')!.style.marginBottom = '0';
+
+		const repeatSummary = headerLeft.createEl('span', {
+			text: '不重复',
+		});
+		repeatSummary.style.fontSize = 'var(--font-ui-smaller)';
+		repeatSummary.style.color = 'var(--text-muted)';
+
+		let isExpanded = false;
+		const repeatGrid = repeatContainer.createDiv(EditTaskModalClasses.elements.repeatGrid);
+		repeatGrid.style.display = 'none';
+
+		headerRow.addEventListener('click', (e) => {
+			// 不拦截清除按钮等子元素的点击
+			if ((e.target as HTMLElement).tagName === 'BUTTON') return;
+			isExpanded = !isExpanded;
+			repeatGrid.style.display = isExpanded ? 'block' : 'none';
+			toggleIcon.style.transform = isExpanded ? 'rotate(90deg)' : '';
+			headerRow.style.marginBottom = isExpanded ? '12px' : '0';
 		});
 
 		const clearBtn = headerRow.createEl('button', {
@@ -410,8 +388,7 @@ export abstract class BaseTaskModal extends Modal {
 		clearBtn.style.padding = '2px 8px';
 		clearBtn.style.fontSize = 'var(--font-ui-smaller)';
 		clearBtn.style.color = 'var(--text-muted)';
-
-		const repeatGrid = repeatContainer.createDiv(EditTaskModalClasses.elements.repeatGrid);
+		clearBtn.style.display = 'none';
 
 		// ========== 频率选择行：每 [间隔输入] [单位下拉] [自定义输入] ==========
 		const freqSelectRow = repeatGrid.createDiv(EditTaskModalClasses.elements.repeatRow);
@@ -623,6 +600,8 @@ export abstract class BaseTaskModal extends Modal {
 			if (!freqValue) {
 				this.repeat = null;
 				previewText.textContent = 'no repeat';
+				repeatSummary.textContent = '不重复';
+				clearBtn.style.display = 'none';
 				manualInput.style.display = 'none';
 				weeklyDaysContainer.style.display = 'none';
 				monthlyDayContainer.style.display = 'none';
@@ -645,6 +624,8 @@ export abstract class BaseTaskModal extends Modal {
 				} else {
 					this.repeat = null;
 					previewText.textContent = 'no repeat';
+				repeatSummary.textContent = '不重复';
+				clearBtn.style.display = 'none';
 				}
 				weeklyDaysContainer.style.display = 'none';
 				monthlyDayContainer.style.display = 'none';
@@ -758,6 +739,15 @@ export abstract class BaseTaskModal extends Modal {
 
 		// 初始化当前值（子类可以覆盖此方法）
 		this.initRepeatValue(freqSelect, intervalInput, manualInput, whenDoneToggle2, dayButtons, monthDayInput, weeklyDaysContainer, monthlyDayContainer, updateRepeat);
+
+		// 如果有已有的 repeat 值，自动展开面板
+		if (this.repeat) {
+			isExpanded = true;
+			repeatGrid.style.display = 'block';
+			toggleIcon.style.transform = 'rotate(90deg)';
+			headerRow.style.marginBottom = '12px';
+			clearBtn.style.display = '';
+		}
 	}
 
 	/**
@@ -997,6 +987,7 @@ export abstract class BaseTaskModal extends Modal {
 	 */
 	protected renderTagsSection(container: HTMLElement): void {
 		const section = container.createDiv(EditTaskModalClasses.elements.section);
+		section.style.marginBottom = "16px";
 		const tagsContainer = section.createDiv(EditTaskModalClasses.elements.tagsSection);
 
 		this.tagSelector = new TagSelector({
@@ -1046,7 +1037,7 @@ export abstract class BaseTaskModal extends Modal {
 				width: 100%;
 			}
 			.modal:has(.gc-edit-task-modal) {
-				width: 700px;
+				width: 560px;
 			}
 
 			/* 滚动容器 - 使用负边距让滚动条贴到模态框右边缘 */
@@ -1077,9 +1068,9 @@ export abstract class BaseTaskModal extends Modal {
 			}
 
 			.${EditTaskModalClasses.elements.title} {
-				font-size: var(--font-ui-large);
+				font-size: var(--font-ui-medium);
 				font-weight: 600;
-				margin-bottom: 20px;
+				margin-bottom: 12px;
 				color: var(--text-normal);
 			}
 			.${EditTaskModalClasses.elements.section} {
@@ -1114,7 +1105,6 @@ export abstract class BaseTaskModal extends Modal {
 				font-size: var(--font-ui-small);
 			}
 			.${EditTaskModalClasses.elements.descTextarea}:focus {
-				outline: 2px solid var(--interactive-accent);
 				border-color: var(--interactive-accent);
 			}
 
@@ -1126,14 +1116,14 @@ export abstract class BaseTaskModal extends Modal {
 				margin-top: 8px;
 			}
 			.${EditTaskModalClasses.elements.priorityBtn} {
-				padding: 6px 4px;
+				padding: 4px 2px;
 				border: 1px solid var(--background-modifier-border);
 				border-radius: 4px;
 				background: var(--background-secondary);
 				color: var(--text-normal);
 				cursor: pointer;
-				font-size: var(--font-ui-smaller);
-				transition: all 0.2s;
+				font-size: 11px;
+				transition: all 0.15s ease;
 				white-space: nowrap;
 				text-align: center;
 			}
@@ -1141,15 +1131,16 @@ export abstract class BaseTaskModal extends Modal {
 				background: var(--background-modifier-hover);
 			}
 			.${EditTaskModalClasses.elements.priorityBtnSelected} {
-				background: var(--interactive-accent) !important;
-				color: var(--text-on-accent) !important;
-				border-color: var(--interactive-accent) !important;
+				background: var(--background-modifier-hover) !important;
+				color: var(--text-normal) !important;
+				border-color: transparent !important;
+				border-left: 3px solid var(--interactive-accent) !important;
 			}
 
 			/* 日期板块 */
 			.${EditTaskModalClasses.elements.datesGrid} {
 				display: grid;
-				grid-template-columns: repeat(3, 1fr);
+				grid-template-columns: repeat(2, 1fr);
 				gap: 10px;
 			}
 			.${EditTaskModalClasses.elements.dateItem} {
@@ -1168,33 +1159,35 @@ export abstract class BaseTaskModal extends Modal {
 				align-items: center;
 			}
 			.${EditTaskModalClasses.elements.dateInput} {
-				flex: 1;
-				padding: 6px 8px;
+				width: auto;
+				padding: 4px 6px;
 				border: 1px solid var(--background-modifier-border);
 				border-radius: 4px;
 				background: var(--background-secondary);
 				color: var(--text-normal);
-				font-size: var(--font-ui-small);
+				font-size: var(--font-ui-smaller);
+				cursor: pointer;
 			}
 			.${EditTaskModalClasses.elements.dateInput}:focus {
-				outline: 2px solid var(--interactive-accent);
 				border-color: var(--interactive-accent);
 			}
 			.${EditTaskModalClasses.elements.dateClear} {
-				width: 32px;
-				height: 32px;
+				width: 22px;
+				height: 22px;
 				padding: 0;
-				border: 1px solid var(--background-modifier-border);
-				border-radius: 4px;
-				background: var(--background-secondary);
-				color: var(--text-muted);
+				border: none;
+				border-radius: 50%;
+				background: transparent;
+				color: var(--text-faint);
 				cursor: pointer;
-				font-size: 20px;
+				font-size: 11px;
 				line-height: 1;
 				display: flex;
 				align-items: center;
 				justify-content: center;
 				flex-shrink: 0;
+				opacity: 0.6;
+				transition: opacity 0.15s;
 			}
 			.${EditTaskModalClasses.elements.dateClear}:hover {
 				background: var(--background-modifier-hover);
@@ -1210,6 +1203,62 @@ export abstract class BaseTaskModal extends Modal {
 			.${EditTaskModalClasses.elements.dateAddTime}:hover {
 				opacity: 1;
 				color: var(--text-normal);
+			}
+
+			/* Flatpickr Obsidian 主题 */
+			.flatpickr-calendar {
+				background: var(--background-primary) !important;
+				border: 1px solid var(--background-modifier-border) !important;
+				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+				border-radius: 6px !important;
+				z-index: 99999 !important;
+			}
+			.flatpickr-day {
+				color: var(--text-normal) !important;
+				border-radius: 4px !important;
+			}
+			.flatpickr-day:hover {
+				background: var(--background-modifier-hover) !important;
+				border-color: var(--background-modifier-hover) !important;
+			}
+			.flatpickr-day.selected,
+			.flatpickr-day.selected:hover {
+				background: var(--interactive-accent) !important;
+				border-color: var(--interactive-accent) !important;
+				color: var(--text-on-accent) !important;
+			}
+			.flatpickr-day.today {
+				border-color: var(--interactive-accent) !important;
+			}
+			.flatpickr-months .flatpickr-month {
+				color: var(--text-normal) !important;
+				fill: var(--text-normal) !important;
+			}
+			.flatpickr-current-month .flatpickr-monthDropdown-months {
+				background: var(--background-secondary) !important;
+				color: var(--text-normal) !important;
+			}
+			.flatpickr-weekday {
+				color: var(--text-muted) !important;
+			}
+			.flatpickr-months .flatpickr-prev-month,
+			.flatpickr-months .flatpickr-next-month {
+				color: var(--text-muted) !important;
+				fill: var(--text-faint) !important;
+			}
+			.flatpickr-time input {
+				color: var(--text-normal) !important;
+				background: var(--background-secondary) !important;
+			}
+			.flatpickr-time .flatpickr-time-separator,
+			.flatpickr-time .flatpickr-am-pm {
+				color: var(--text-normal) !important;
+			}
+			.flatpickr-time .numInputWrapper span.arrowUp::after {
+				border-bottom-color: var(--text-muted) !important;
+			}
+			.flatpickr-time .numInputWrapper span.arrowDown::after {
+				border-top-color: var(--text-muted) !important;
 			}
 
 			/* 标签选择器板块 */
@@ -1269,16 +1318,16 @@ export abstract class BaseTaskModal extends Modal {
 			/* 操作按钮 */
 			.${EditTaskModalClasses.elements.buttons} {
 				display: flex;
-				gap: 12px;
+				gap: 8px;
 				justify-content: flex-end;
-				margin-top: 24px;
+				margin-top: 20px;
 			}
 			.${EditTaskModalClasses.elements.buttons} button {
 				padding: 8px 16px;
-				border: 1px solid var(--background-modifier-border);
+				border: none;
 				border-radius: 4px;
-				background: var(--background-secondary);
-				color: var(--text-normal);
+				background: transparent;
+				color: var(--text-muted);
 				cursor: pointer;
 				font-size: var(--font-ui-small);
 			}
