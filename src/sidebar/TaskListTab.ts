@@ -31,7 +31,7 @@ export class TaskListTab {
 
 	private debounceTimer: number | null = null;
 	private taskListEl: HTMLElement | null = null;
-	private cardResults: Array<{ element: HTMLElement; destroy: () => void }> = [];
+	private cardMap: Map<string, { element: HTMLElement; destroy: () => void }> = new Map();
 
 	constructor(app: App, plugin: any) {
 		this.app = app;
@@ -39,6 +39,8 @@ export class TaskListTab {
 	}
 
 	render(container: HTMLElement): void {
+		this.cardMap.clear();
+
 		// 搜索框
 		const searchContainer = container.createDiv(SidebarClasses.elements.searchInput);
 		const searchInput = searchContainer.createEl('input', {
@@ -434,8 +436,8 @@ export class TaskListTab {
 	private renderTaskList(): void {
 		if (!this.taskListEl) return;
 
-		this.destroyCards();
-		this.taskListEl.empty();
+		// 保存滚动位置
+		const savedScrollTop = this.taskListEl.scrollTop;
 
 		const allTasks = this.plugin?.taskCache?.getAllTasks() as GCTask[] | undefined;
 		if (!allTasks) return;
@@ -457,29 +459,59 @@ export class TaskListTab {
 			: 'startDate';
 		tasks = sortTasks(tasks, { field: sortField, order: this.sortOrder });
 
+		// 计算新任务 ID 集合
+		const newTaskIds = new Set(tasks.map(t => `${t.filePath}:${t.lineNumber}`));
+
+		// 移除不再需要显示的卡片
+		for (const [taskId, cardResult] of this.cardMap) {
+			if (!newTaskIds.has(taskId)) {
+				cardResult.destroy();
+				this.cardMap.delete(taskId);
+			}
+		}
+
+		// 移除旧的空状态提示
+		const existingEmpty = this.taskListEl.querySelector(`.${SidebarClasses.elements.emptyState}`);
+		if (existingEmpty) existingEmpty.remove();
+
 		if (tasks.length === 0) {
 			const empty = this.taskListEl.createDiv(SidebarClasses.elements.emptyState);
 			empty.textContent = this.searchQuery ? '没有匹配的任务' : '暂无任务';
 			return;
 		}
 
-		// 渲染任务卡片
+		// 为新出现的任务创建卡片
 		const config = buildSidebarConfig(this.plugin.settings);
 		for (const task of tasks) {
-			const card = new TaskCardComponent({
-				task,
-				config,
-				container: this.taskListEl!,
-				app: this.app,
-				plugin: this.plugin,
-				onClick: () => {
-					openFileInExistingLeaf(this.app, task.filePath, task.lineNumber);
-				},
-				onRefresh: () => this.renderTaskList(),
-			});
-			const result = card.render();
-			this.cardResults.push(result);
+			const taskId = `${task.filePath}:${task.lineNumber}`;
+			if (!this.cardMap.has(taskId)) {
+				const card = new TaskCardComponent({
+					task,
+					config,
+					container: this.taskListEl!,
+					app: this.app,
+					plugin: this.plugin,
+					onClick: () => {
+						openFileInExistingLeaf(this.app, task.filePath, task.lineNumber);
+					},
+					onRefresh: () => this.renderTaskList(),
+				});
+				const result = card.render();
+				this.cardMap.set(taskId, result);
+			}
 		}
+
+		// 确保 DOM 顺序与排序顺序一致
+		for (const task of tasks) {
+			const taskId = `${task.filePath}:${task.lineNumber}`;
+			const cardResult = this.cardMap.get(taskId);
+			if (cardResult) {
+				this.taskListEl.appendChild(cardResult.element);
+			}
+		}
+
+		// 恢复滚动位置
+		this.taskListEl.scrollTop = savedScrollTop;
 	}
 
 	private filterTasks(tasks: GCTask[]): GCTask[] {
@@ -551,9 +583,9 @@ export class TaskListTab {
 	}
 
 	private destroyCards(): void {
-		for (const card of this.cardResults) {
-			card.destroy();
+		for (const [, cardResult] of this.cardMap) {
+			cardResult.destroy();
 		}
-		this.cardResults = [];
+		this.cardMap.clear();
 	}
 }
