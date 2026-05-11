@@ -64,6 +64,8 @@ export interface SyncResultDetail {
     success: boolean;
     /** 错误信息（仅在失败时有值） */
     error?: string;
+    /** 冲突解决方向（仅 type 为 conflict 时有值） */
+    conflictResolution?: 'push' | 'pull';
 }
 
 /** 同步结果 */
@@ -162,13 +164,17 @@ export class FeishuTaskSync {
                 const change = changes[i];
                 onProgress?.(`🔄 飞书同步: ${this.changeLabel(change.type)} ${i + 1}/${total}`);
                 try {
-                    await this.applyChange(change, result);
+                    const direction = await this.applyChange(change, result);
                     const taskDesc = change.obsidianTask?.description || change.feishuTask?.summary || 'unknown';
+                    const isConflict = change.type === 'conflict';
                     result.details.push({
                         type: change.type,
-                        label: this.changeLabel(change.type),
+                        label: isConflict
+                            ? (direction === 'pull' ? '拉取更新' : '推送更新')
+                            : this.changeLabel(change.type),
                         taskDescription: taskDesc,
                         success: true,
+                        conflictResolution: isConflict ? direction : undefined,
                     });
                 } catch (error) {
                     const taskDesc = change.obsidianTask?.description || change.feishuTask?.summary || 'unknown';
@@ -712,28 +718,28 @@ export class FeishuTaskSync {
 
     // ==================== 变更应用 ====================
 
-    private async applyChange(change: PendingChange, result: SyncResult): Promise<void> {
+    private async applyChange(change: PendingChange, result: SyncResult): Promise<'push' | 'pull' | undefined> {
         switch (change.type) {
             case 'push-create':
                 await this.pushCreate(change.obsidianTask!, result);
-                break;
+                return 'push';
             case 'push-update':
                 await this.pushUpdate(change.feishuTask!, change.obsidianTask!, result);
-                break;
+                return 'push';
             case 'pull-create':
                 await this.pullCreate(change.feishuTask!, result);
-                break;
+                return 'pull';
             case 'pull-update':
                 await this.pullUpdate(change.feishuTask!, change.obsidianTask!, result);
-                break;
+                return 'pull';
             case 'conflict':
-                await this.resolveConflict(change, result);
-                break;
+                return await this.resolveConflict(change, result);
             case 'clear-guid':
                 await this.clearStaleGuid(change.obsidianTask!, result);
-                break;
+                return undefined;
             default:
                 result.skipped++;
+                return undefined;
         }
     }
 
@@ -896,17 +902,21 @@ export class FeishuTaskSync {
         Logger.info('FeishuTaskSync', `Pull updated: ${feishu.summary}`);
     }
 
-    /** 处理冲突 */
-    private async resolveConflict(change: PendingChange, result: SyncResult): Promise<void> {
+    /** 处理冲突，返回解决方向 */
+    private async resolveConflict(change: PendingChange, result: SyncResult): Promise<'push' | 'pull'> {
         const { feishuTask: feishu, obsidianTask: task } = change;
-        if (!feishu || !task) return;
+        if (!feishu || !task) return 'push';
+
+        let resolution: 'push' | 'pull' = 'push';
 
         switch (this.options.conflictStrategy) {
             case 'local-win':
                 await this.pushUpdate(feishu, task, result);
+                resolution = 'push';
                 break;
             case 'remote-win':
                 await this.pullUpdate(feishu, task, result);
+                resolution = 'pull';
                 break;
             case 'newest-win':
             default: {
@@ -918,15 +928,18 @@ export class FeishuTaskSync {
 
                 if (feishuTime > lastSync && lastSync > 0) {
                     await this.pullUpdate(feishu, task, result);
+                    resolution = 'pull';
                 } else {
                     await this.pushUpdate(feishu, task, result);
+                    resolution = 'push';
                 }
                 break;
             }
         }
 
         result.conflicted++;
-        Logger.info('FeishuTaskSync', `Conflict resolved via ${this.options.conflictStrategy}: ${task.description}`);
+        Logger.info('FeishuTaskSync', `Conflict resolved via ${this.options.conflictStrategy} (${resolution}): ${task.description}`);
+        return resolution;
     }
 
     /** 清除飞书侧已不存在的僵尸同步记录 */

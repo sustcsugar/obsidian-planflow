@@ -62,7 +62,10 @@ export class SyncResultModal extends Modal {
 			const item = listEl.createDiv(SyncResultModalClasses.elements.detailItem);
 			item.addClass(detail.success ? SyncResultModalClasses.modifiers.success : SyncResultModalClasses.modifiers.failed);
 
-			const isPush = detail.type.startsWith('push');
+			const isConflict = detail.type === 'conflict';
+			const isPush = isConflict
+				? detail.conflictResolution === 'push'
+				: detail.type.startsWith('push');
 			if (isPush) {
 				item.addClass(SyncResultModalClasses.modifiers.push);
 			} else {
@@ -73,9 +76,20 @@ export class SyncResultModal extends Modal {
 			const icon = item.createSpan(SyncResultModalClasses.elements.detailIcon);
 			icon.textContent = detail.success ? '✅' : '❌';
 
-			// label badge
-			const labelEl = item.createSpan(SyncResultModalClasses.elements.detailLabel);
-			labelEl.textContent = detail.label;
+			// label badge(s)
+			if (isConflict && detail.conflictResolution) {
+				const dirLabel = detail.conflictResolution === 'pull' ? '拉取' : '推送';
+				const dirBadge = item.createSpan(SyncResultModalClasses.elements.detailLabel);
+				dirBadge.textContent = dirLabel + '更新';
+
+				const conflictBadge = item.createSpan(SyncResultModalClasses.elements.detailLabel);
+				conflictBadge.textContent = '冲突';
+				conflictBadge.style.background = 'var(--background-modifier-warning)';
+				conflictBadge.style.color = 'var(--text-warning)';
+			} else {
+				const labelEl = item.createSpan(SyncResultModalClasses.elements.detailLabel);
+				labelEl.textContent = detail.label;
+			}
 
 			// task description
 			const descEl = item.createSpan(SyncResultModalClasses.elements.detailDesc);
