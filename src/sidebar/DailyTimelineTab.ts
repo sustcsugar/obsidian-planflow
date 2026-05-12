@@ -318,9 +318,14 @@ export class DailyTimelineTab {
 		const slot = slots[slotIndex] as HTMLElement;
 		if (!slot) return;
 
-		const line = slot.createDiv(SidebarClasses.elements.timelineCurrentTime);
-		const percent = (currentMinute / 60) * 100;
-		line.style.top = `${percent}%`;
+		// 计算时间线在 container 中的绝对位置（基于 slot 的 offsetTop）
+		const slotTop = slot.offsetTop;
+		const slotHeight = slot.offsetHeight;
+		const minuteOffset = (currentMinute / 60) * slotHeight;
+		const lineTop = slotTop + minuteOffset;
+
+		const line = container.createDiv(SidebarClasses.elements.timelineCurrentTime);
+		line.style.top = `${lineTop}px`;
 	}
 
 	private renderTaskCards(container: HTMLElement, tasks: GCTask[]): void {

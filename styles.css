@@ -21,6 +21,12 @@ Author: sugar
 	/* Task Status Colors */
 	--task-completed-color: #52c41a;
 	--task-pending-color: #ff7a45;
+
+	/* Timeline Slot — 卡片高度驱动格子行高 */
+	--gc-tl-card-h: 24px;
+	--gc-tl-card-gap: 2px;
+	--gc-tl-cards-per-slot: 2;
+	--gc-tl-slot-h: calc(var(--gc-tl-cards-per-slot) * var(--gc-tl-card-h) + (var(--gc-tl-cards-per-slot) - 1) * var(--gc-tl-card-gap));
 }
 
 /* ========================================
@@ -1382,6 +1388,55 @@ Author: sugar
 	margin-left: 0;
 }
 
+/* ========== 时间轴视图内的任务卡片 — 固定高度，单行不换行 ========== */
+.gc-sidebar__timeline-time-tasks .gc-task-card,
+.gc-week-view__time-tasks .gc-task-card,
+.gc-week-view__allday-tasks .gc-task-card,
+.gc-day-view__time-tasks .gc-task-card {
+	height: var(--gc-tl-card-h);
+	padding: 2px 6px;
+	font-size: 12px;
+	gap: 4px;
+	flex-wrap: nowrap;
+	overflow: hidden;
+	box-shadow: none;
+	border-left-width: 2px;
+}
+
+.gc-sidebar__timeline-time-tasks .gc-task-card__text,
+.gc-week-view__time-tasks .gc-task-card__text,
+.gc-week-view__allday-tasks .gc-task-card__text,
+.gc-day-view__time-tasks .gc-task-card__text {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.gc-sidebar__timeline-time-tasks .gc-task-card__tags,
+.gc-week-view__time-tasks .gc-task-card__tags,
+.gc-week-view__allday-tasks .gc-task-card__tags,
+.gc-day-view__time-tasks .gc-task-card__tags {
+	flex-wrap: nowrap;
+	overflow: hidden;
+	flex-shrink: 0;
+	max-width: 40%;
+}
+
+.gc-sidebar__timeline-time-tasks .gc-task-card__times,
+.gc-week-view__time-tasks .gc-task-card__times,
+.gc-week-view__allday-tasks .gc-task-card__times,
+.gc-day-view__time-tasks .gc-task-card__times {
+	flex-wrap: nowrap;
+	flex-shrink: 0;
+}
+
+.gc-sidebar__timeline-time-tasks .gc-task-card__checkbox,
+.gc-week-view__time-tasks .gc-task-card__checkbox,
+.gc-week-view__allday-tasks .gc-task-card__checkbox,
+.gc-day-view__time-tasks .gc-task-card__checkbox {
+	flex-shrink: 0;
+}
+
 .gc-task-card--month {
 	padding: 4px 6px;
 	font-size: 11px;
@@ -1944,8 +1999,9 @@ Author: sugar
 .gc-week-view--timeline .gc-week-view__tasks-grid {
 	display: grid;
 	grid-template-columns: 48px repeat(7, 1fr);
-	grid-template-rows: 52px auto repeat(24, max-content);
-	overflow-y: visible;
+	grid-template-rows: 52px auto repeat(24, var(--gc-tl-slot-h));
+	align-content: start;
+	overflow-y: auto;
 	overflow-x: hidden;
 	flex: 1 1 auto;
 	min-height: 0;
@@ -1976,7 +2032,7 @@ Author: sugar
 	align-items: flex-start;
 	justify-content: flex-end;
 	padding: 2px 6px 0 0;
-	min-height: 36px;
+	height: var(--gc-tl-slot-h);
 	border-top: 1px solid var(--background-modifier-border);
 	background-color: var(--background-primary);
 	border-right: 1px solid var(--background-modifier-border);
@@ -1991,8 +2047,7 @@ Author: sugar
 	display: flex;
 	align-items: flex-start;
 	justify-content: flex-end;
-	padding: 2px 6px 0 0;
-	min-height: 28px;
+	padding: 0 6px 0 0;
 	font-size: 11px;
 	color: var(--text-muted);
 	border-right: 1px solid var(--background-modifier-border);
@@ -2004,9 +2059,8 @@ Author: sugar
 .gc-week-view__allday-slot {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
-	padding: 2px 4px;
-	min-height: 28px;
+	gap: var(--gc-tl-card-gap);
+	padding: 0 4px;
 	border-bottom: 1px solid var(--background-modifier-border);
 	border-right: 1px solid var(--background-modifier-border);
 	background-color: var(--background-primary);
@@ -2016,7 +2070,8 @@ Author: sugar
 .gc-week-view__allday-tasks {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--gc-tl-card-gap);
+	min-height: var(--gc-tl-card-h);
 }
 
 .gc-week-view__allday-slot--drag-over {
@@ -2034,18 +2089,19 @@ Author: sugar
 	display: flex;
 	flex-direction: column;
 	gap: 2px;
-	padding: 2px 4px;
-	min-height: 36px;
+	padding: 0 4px;
+	height: var(--gc-tl-slot-h);
+	overflow: hidden;
 	border-top: 1px solid var(--background-modifier-border);
 	border-right: 1px solid var(--background-modifier-border);
-	overflow: visible;
 	position: relative;
 }
 
 .gc-week-view__time-tasks {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--gc-tl-card-gap);
+	overflow: hidden;
 }
 
 .gc-week-view__row--drag-over {
@@ -2141,7 +2197,8 @@ Author: sugar
 
 .gc-day-view__time-slot {
 	display: flex;
-	min-height: 48px;
+	height: var(--gc-tl-slot-h);
+	overflow: hidden;
 	border-top: 1px solid var(--background-modifier-border);
 	position: relative;
 }
@@ -2164,9 +2221,9 @@ Author: sugar
 	flex: 1;
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
-	padding: 4px 0;
+	gap: var(--gc-tl-card-gap);
 	min-height: 0;
+	overflow: hidden;
 }
 
 .gc-day-view__time-slot--drag-over {
@@ -4249,12 +4306,13 @@ Author: sugar
 	position: relative;
 }
 
+/* 时间轴固定行高：由 --gc-tl-cards-per-slot × --gc-tl-card-h 驱动 */
 .gc-sidebar__timeline-time-slot {
 	display: flex;
 	gap: 8px;
-	min-height: 40px;
+	height: var(--gc-tl-slot-h);
+	overflow: hidden;
 	border-top: 1px solid var(--background-modifier-border);
-	padding: 4px 0;
 	position: relative;
 }
 
@@ -4275,8 +4333,9 @@ Author: sugar
 	flex: 1;
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: var(--gc-tl-card-gap);
 	min-width: 0;
+	overflow: hidden;
 }
 
 /* 当前时间指示线 */
@@ -4286,7 +4345,7 @@ Author: sugar
 	right: 0;
 	height: 2px;
 	background-color: var(--interactive-accent);
-	z-index: 5;
+	z-index: 10;
 	pointer-events: none;
 }
 
@@ -4319,7 +4378,6 @@ Author: sugar
 /* 空时间格 "+" 创建按钮 */
 .gc-sidebar__timeline-slot-create {
 	flex: 1;
-	min-height: 30px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
