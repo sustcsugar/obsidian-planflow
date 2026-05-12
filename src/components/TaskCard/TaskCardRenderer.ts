@@ -190,6 +190,24 @@ export class TaskCardRenderer {
 	}
 
 	/**
+	 * 渲染结构化元数据字段（%%[key::value]%%）
+	 */
+	renderMetadataFields(card: HTMLElement, task: GCTask): void {
+		if (!task.metadataFields) return;
+		const entries = Object.entries(task.metadataFields);
+		if (entries.length === 0) return;
+
+		const container = card.createDiv('gc-task-card__metadata');
+		for (const [key, value] of entries) {
+			const itemEl = container.createDiv('gc-task-card__metadata-item');
+			const keyEl = itemEl.createEl('span', { cls: 'gc-task-card__metadata-key' });
+			keyEl.setText(`${key}:`);
+			const valueEl = itemEl.createEl('span', { cls: 'gc-task-card__metadata-value' });
+			valueEl.setText(value || '(空)');
+		}
+	}
+
+	/**
 	 * 渲染周期指示器（🔁 小图标）
 	 */
 	renderRepeatIndicator(card: HTMLElement): void {

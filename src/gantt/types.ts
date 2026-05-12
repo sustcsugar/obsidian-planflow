@@ -70,6 +70,8 @@ export interface GanttChartTask {
 	repeat?: string;
 	/** ticktick 文本（%%content%%） */
 	ticktick?: string;
+	/** 结构化内联元数据字段 (%%[key::value]%%) */
+	metadataFields?: Record<string, string>;
 }
 
 /**

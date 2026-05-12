@@ -73,6 +73,7 @@ export class TaskDataAdapter {
 			completionDate: task.completionDate,
 			repeat: task.repeat,
 			ticktick: task.ticktick,
+			metadataFields: task.metadataFields,
 		};
 	}
 

@@ -21,6 +21,7 @@ export interface TaskUpdates {
 	content?: string;
 	tags?: string[];
 	ticktick?: string | null;
+	metadataFields?: Record<string, string> | null;
 	feishuGuid?: string | null;  // 飞书任务 GUID，null 表示清除
 	feishuDesc?: string | null;  // 飞书任务描述，null 表示清除
 	datePrecision?: {
@@ -40,6 +41,7 @@ interface MergedTask {
 	description: string;
 	tags?: string[];  // 任务标签
 		ticktick?: string;  // ticktick 文本
+	metadataFields?: Record<string, string>;  // 结构化内联元数据字段
 	feishuGuid?: string;  // 飞书任务 GUID
 	feishuDesc?: string;  // 飞书任务描述
 	createdDate?: Date;
@@ -159,6 +161,7 @@ export function serializeTask(
 		// 保留标签，优先使用更新的标签
 		tags: updates.tags !== undefined ? updates.tags : task.tags,
 		ticktick: updates.ticktick !== undefined ? (updates.ticktick || undefined) : task.ticktick,
+			metadataFields: updates.metadataFields !== undefined ? (updates.metadataFields || undefined) : task.metadataFields,
 		feishuGuid: updates.feishuGuid !== undefined ? (updates.feishuGuid || undefined) : task.feishuGuid,
 		feishuDesc: updates.feishuDesc !== undefined ? (updates.feishuDesc || undefined) : task.feishuDesc,
 		// 处理日期字段：undefined 使用原始值，null 转为 undefined（表示清除）
@@ -223,6 +226,12 @@ export function serializeTask(
 	if (merged.ticktick) {
 		parts.push("%%" + merged.ticktick + "%%");
 	}
+		// metadata fields (%%[key::value]%%)
+		if (merged.metadataFields) {
+			for (const [key, value] of Object.entries(merged.metadataFields)) {
+				parts.push(`%%[${key}:: ${value}]%%`);
+			}
+		}
 
 	// 优先级（放在描述后）
 	if (format === 'tasks') {

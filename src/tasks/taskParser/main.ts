@@ -91,8 +91,8 @@ export function parseTasksFromListItems(
         // 混合格式默认使用 tasks 格式进行解析
         const format = detectedFormat === 'mixed' ? 'tasks' : detectedFormat;
 
-        // 提取 %%content%% ticktick（在描述提取之前）
-        const { ticktick, contentWithoutTicktick } = extractTicktick(contentWithoutFeishu);
+        // 提取 %%content%% ticktick 和 %%[key::value]%% 内联元数据（在描述提取之前）
+        const { ticktick, metadataFields, contentWithoutTicktick } = extractTicktick(contentWithoutFeishu);
 
         // ==================== 第四步：解析属性 ====================
         const task: GCTask = {
@@ -106,6 +106,7 @@ export function parseTasksFromListItems(
             status,
             priority: 'normal', // 默认优先级
             ticktick,
+            metadataFields: Object.keys(metadataFields).length > 0 ? metadataFields : undefined,
             feishuGuid,
             feishuDesc,
         };
@@ -290,8 +291,8 @@ export function parseSingleTaskLine(
     const detectedFormat = detectFormat(contentWithoutFilter, enabledFormats);
     const format = detectedFormat === 'mixed' ? 'tasks' : detectedFormat;
 
-    // 提取 %%content%% ticktick（在描述提取之前）
-    const { ticktick, contentWithoutTicktick } = extractTicktick(contentWithoutFilter);
+    // 提取 %%content%% ticktick 和 %%[key::value]%% 内联元数据（在描述提取之前）
+    const { ticktick, metadataFields, contentWithoutTicktick } = extractTicktick(contentWithoutFilter);
 
     const task: GCTask = {
         filePath: filePath || '',
@@ -304,6 +305,7 @@ export function parseSingleTaskLine(
         status,
         priority: 'normal', // 默认优先级
         ticktick,
+        metadataFields: Object.keys(metadataFields).length > 0 ? metadataFields : undefined,
     };
 
     // 解析标签
