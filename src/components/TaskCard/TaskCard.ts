@@ -106,6 +106,7 @@ export class TaskCardComponent {
 		// ticktick（%%content%%）
 		if (config.showTicktick) {
 			this.renderer.renderTicktick(card, task);
+			this.renderer.renderMetadataFields(card, task);
 		}
 
 		// 周期指示器（虚拟实例和真实周期任务都显示）

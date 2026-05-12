@@ -146,47 +146,71 @@ export function extractDataviewDescription(content: string): string {
     return text;
 }
 
-// ==================== ticktick 提取 ====================
+// ==================== ticktick / 内联元数据提取 ====================
 
 /**
- * 提取任务 ticktick（%%content%% 块）
+ * 提取任务 ticktick（%%content%% 块）和结构化内联元数据（%%[key::value]%% 块）
  *
- * 从任务内容中提取所有 %%...%% ticktick 块，将其拼接为一个字符串，
- * 并从内容中移除这些 ticktick 块。
+ * 从任务内容中提取：
+ * 1. %%[key::value]%% 结构化元数据 → metadataFields (Record<string, string>)
+ * 2. %%plain text%% 非结构化文本 → ticktick (拼接字符串)
  *
- * @param content - 任务内容（已移除全局过滤器）
- * @returns 包含 ticktick 文本和清理后内容的对象
+ * 并从内容中移除这些块。
+ *
+ * @param content - 任务内容（已移除全局过滤器和飞书字段）
+ * @returns 包含 ticktick 文本、metadataFields 和清理后内容的对象
  *
  * @example
- * extractTicktick("任务 %%重要备注%% ⏫ 📅 2024-01-15")
- * // 返回: { ticktick: "重要备注", contentWithoutTicktick: "任务  ⏫ 📅 2024-01-15" }
+ * extractTicktick("任务 %%[project:: obsidian]%% %%重要备注%% ⏫ 📅 2024-01-15")
+ * // 返回: { ticktick: "重要备注", metadataFields: { project: "obsidian" }, contentWithoutTicktick: "任务  ⏫ 📅 2024-01-15" }
  *
  * extractTicktick("普通任务")
- * // 返回: { ticktick: undefined, contentWithoutTicktick: "普通任务" }
+ * // 返回: { ticktick: undefined, metadataFields: {}, contentWithoutTicktick: "普通任务" }
  */
 export function extractTicktick(content: string): {
     ticktick: string | undefined;
+    metadataFields: Record<string, string>;
     contentWithoutTicktick: string;
 } {
-    const matches: string[] = [];
+    const ticktickMatches: string[] = [];
+    const metadataFields: Record<string, string> = {};
     let match: RegExpExecArray | null;
 
-    const regex = RegularExpressions.DescriptionExtraction.matchTicktick;
-    regex.lastIndex = 0;
+    // 第一步：提取 %%[key::value]%% 结构化元数据
+    const metadataRegex = RegularExpressions.DescriptionExtraction.matchMetadataField;
+    metadataRegex.lastIndex = 0;
 
-    while ((match = regex.exec(content)) !== null) {
-        const text = match[1].trim();
-        if (text) {
-            matches.push(text);
+    while ((match = metadataRegex.exec(content)) !== null) {
+        const key = match[1].trim();
+        const value = match[2].trim();
+        if (key) {
+            metadataFields[key] = value;
         }
     }
 
-    const ticktick = matches.length > 0 ? matches.join(' ') : undefined;
-    const contentWithoutTicktick = content.replace(
-        RegularExpressions.DescriptionExtraction.removeTicktick, ' '
-    ).replace(/\s{2,}/g, ' ').trim();
+    // 第二步：移除结构化元数据块后，提取剩余 %%text%% 作为 ticktick
+    const contentAfterMetadata = Object.keys(metadataFields).length > 0
+        ? content.replace(RegularExpressions.DescriptionExtraction.matchMetadataField, ' ')
+        : content;
 
-    return { ticktick, contentWithoutTicktick };
+    const ticktickRegex = RegularExpressions.DescriptionExtraction.matchTicktick;
+    ticktickRegex.lastIndex = 0;
+
+    while ((match = ticktickRegex.exec(contentAfterMetadata)) !== null) {
+        const text = match[1].trim();
+        if (text) {
+            ticktickMatches.push(text);
+        }
+    }
+
+    const ticktick = ticktickMatches.length > 0 ? ticktickMatches.join(' ') : undefined;
+    const hasMetadata = Object.keys(metadataFields).length > 0;
+    const contentWithoutTicktick = content
+        .replace(RegularExpressions.DescriptionExtraction.removeTicktick, ' ')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+
+    return { ticktick, metadataFields: hasMetadata ? metadataFields : {}, contentWithoutTicktick };
 }
 
 // ==================== 飞书同步字段提取 ====================

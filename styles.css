@@ -2509,6 +2509,53 @@ Author: sugar
 	border-left: 2px solid var(--interactive-accent);
 }
 
+.gc-task-tooltip__metadata {
+	margin: 4px 0;
+	padding-left: 6px;
+}
+
+.gc-task-tooltip__metadata-item {
+	display: flex;
+	align-items: baseline;
+	gap: 4px;
+	margin: 2px 0;
+	font-size: 0.85em;
+}
+
+.gc-task-tooltip__metadata-key {
+	color: var(--text-muted);
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.gc-task-tooltip__metadata-value {
+	color: var(--text-normal);
+	word-break: break-word;
+}
+
+/* TaskCard metadata styles */
+.gc-task-card__metadata {
+	margin: 2px 0;
+	padding-left: 4px;
+}
+
+.gc-task-card__metadata-item {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 2px;
+	font-size: 0.8em;
+	color: var(--text-muted);
+	margin-right: 8px;
+}
+
+.gc-task-card__metadata-key {
+	font-weight: 600;
+}
+
+.gc-task-card__metadata-value {
+	color: var(--text-on-surface);
+}
+
 /* 6.9 Heatmap Components */
 /* 热力图色卡：蓝、绿、红（5级） - BEM类名支持 */
 /* 为年视图新类名添加热力图样式，排除非当月日期 */

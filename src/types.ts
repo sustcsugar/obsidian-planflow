@@ -113,7 +113,8 @@ export interface GCTask {
 	completionDate?: Date;         // 完成日期
 	repeat?: string;               // 周期规则，如 "every day", "every week on Monday when done"
 	warning?: string;              // 警告信息：显示任务格式问题或缺失的关键属性
-	ticktick?: string;             // %%content%% ticktick 文本（从描述中提取）
+	ticktick?: string;             // %%content%% ticktick 文本（从描述中提取，非结构化的纯文本块）
+	metadataFields?: Record<string, string>; // %%[key::value]%% 结构化内联元数据字段
 	// 时间精度：记录每个日期字段原始解析时是否包含时间（HH:mm）
 	// 'day' = 全天任务（仅日期），'time' = 定时任务（日期+时间）
 	datePrecision?: Partial<Record<'createdDate' | 'startDate' | 'scheduledDate' | 'dueDate' | 'cancelledDate' | 'completionDate', 'day' | 'time'>>;

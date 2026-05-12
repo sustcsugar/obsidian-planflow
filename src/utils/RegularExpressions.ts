@@ -515,6 +515,16 @@ export class RegularExpressions {
         matchTicktick: /%%(.+?)%%/g,
 
         /**
+         * 提取 %%[key::value]%% 结构化内联元数据字段（非贪婪，支持多个块）
+         * 捕获组1为字段名（key），捕获组2为字段值（value）
+         *
+         * @example
+         * "任务 %%[project:: obsidian]%%" -> 匹配，key="project", value="obsidian"
+         * "%%[context:: 办公室]%% %%[estimate:: 2h]%%" -> 可多次匹配
+         */
+        matchMetadataField: /%%\[([^:\]]+)::\s*([^\]]*)\]%%/g,
+
+        /**
          * 移除 %%content%% ticktick 块及其周围的空格
          * 与 removePriorityEmoji、removeTasksDate 等保持一致的移除模式
          *
