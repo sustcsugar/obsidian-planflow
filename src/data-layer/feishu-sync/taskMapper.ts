@@ -32,7 +32,7 @@ export interface FeishuTaskPayload {
 export function toFeishuTaskPayload(task: GCTask): FeishuTaskPayload {
     const payload: FeishuTaskPayload = {};
 
-    // summary ↔ description (strip markdown links / wikilinks to avoid Feishu URL validation errors)
+    // summary ↔ description（剥离 markdown 链接的 URL 部分，保留显示文本；wikilink 原样保留）
     if (task.description) {
         payload.summary = sanitizeSummary(task.description);
     }
@@ -208,16 +208,13 @@ export function feishuTimeToDate(time?: FeishuTaskTime): Date | undefined {
 }
 
 /**
- * 清理任务描述，移除飞书 API 不接受的 URL 格式
+ * 清理任务描述中飞书 summary 不接受的 URL 格式
  *
- * 剥离 markdown 链接 `[text](url)` → `text`，
- * 剥离 wikilink `[[note]]` → `note`，
- * 避免飞书因 zotero://、obsidian://、file:/// 等 scheme 报错。
+ * 剥离 markdown 链接 `[text](url)` → `text`（飞书 summary 不支持 URL），
+ * 保留 wikilink `[[note]]` 原样传输（纯文本，不含 URL scheme）。
  */
 function sanitizeSummary(description: string): string {
-    const { stripMarkdownLink, stripWikilink } = RegularExpressions.FeishuSummarySanitize;
     return description
-        .replace(stripMarkdownLink, '$1')
-        .replace(stripWikilink, '$1')
+        .replace(RegularExpressions.FeishuSummarySanitize.stripMarkdownLink, '$1')
         .trim();
 }

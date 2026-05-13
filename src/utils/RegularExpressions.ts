@@ -538,18 +538,14 @@ export class RegularExpressions {
     // ==================== 飞书摘要清理正则 ====================
 
     /**
-     * 清理发送到飞书的任务标题（summary）中的非法内容
+     * 清理发送到飞书 summary 的 URL 格式
      *
-     * 飞书 v2 API 会检测 summary 中的 URL 并校验其 scheme，
-     * 仅允许 http://、https://、applink://。
-     * Obsidian 任务描述中常包含 markdown 链接（zotero://、obsidian://、file:/// 等），
-     * 需要剥离链接语法，只保留显示文本。
+     * 飞书 summary 不接受 URL，需剥离 markdown 链接语法只保留显示文本。
+     * wikilink `[[note]]` 是纯文本不含 URL，可直接传输。
      */
     public static readonly FeishuSummarySanitize = {
         /** 剥离 markdown 链接 `[text](url)` → `text` */
         stripMarkdownLink: /\[([^\]]*)\]\([^)]*\)/g,
-        /** 剥离 wikilink `[[note]]` 或 `[[note|alias]]` → `note` */
-        stripWikilink: /\[\[([^\]|]*)(?:\|[^\]]*)?\]\]/g,
     } as const;
 
     // ==================== 复选框状态正则 ====================
