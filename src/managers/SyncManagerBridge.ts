@@ -42,14 +42,14 @@ export class SyncManagerBridge {
 
 			if (this.syncManager) {
 				Logger.info('SyncManagerBridge', 'Sync manager initialized');
-
-				// 如果启用了自动同步，启动定时同步
-				if (config.syncInterval > 0) {
-					this.startAutoSync(config.syncInterval);
-				}
 			}
 		} catch (error) {
 			Logger.error('SyncManagerBridge', 'Failed to initialize sync manager', error);
+		}
+
+		// 自动同步不依赖 syncManager，直接使用 syncFeishuTasks
+		if (config.syncInterval > 0) {
+			this.startAutoSync(config.syncInterval);
 		}
 	}
 
@@ -57,26 +57,36 @@ export class SyncManagerBridge {
 	 * 更新配置（当设置变化时调用）
 	 */
 	async updateConfiguration(config?: SyncConfiguration): Promise<void> {
+		// 始终先停止现有定时器
+		this.stopAutoSync();
+
 		if (!config) {
-			this.destroy();
+			this.destroySyncManager();
 			return;
 		}
 
-		// 检查是否需要重新初始化
 		const hasEnabledSources = config.enabledSources?.api || config.enabledSources?.caldav;
 
-		if (!hasEnabledSources && this.syncManager) {
-			this.destroy();
-			Logger.info('SyncManagerBridge', 'Sync manager destroyed (no enabled sources)');
-		} else if (!this.syncManager && hasEnabledSources) {
-			this.initialize(config);
-		} else if (this.syncManager) {
-			// 更新现有配置
-			this.syncManager.updateConfiguration(config);
-			this.stopAutoSync();
-			if (config.syncInterval > 0) {
-				this.startAutoSync(config.syncInterval);
+		if (!hasEnabledSources) {
+			this.destroySyncManager();
+		} else if (!this.syncManager) {
+			// syncManager 不存在，重新初始化
+			try {
+				this.syncManager = createSyncManager(config);
+				if (this.syncManager) {
+					Logger.info('SyncManagerBridge', 'Sync manager re-initialized');
+				}
+			} catch (error) {
+				Logger.error('SyncManagerBridge', 'Failed to re-initialize sync manager', error);
 			}
+		} else {
+			// 更新现有配置（不再调用 SyncManager 的 startAutoSync）
+			this.syncManager.updateConfiguration(config);
+		}
+
+		// 自动同步不依赖 syncManager
+		if (config.syncInterval > 0 && hasEnabledSources) {
+			this.startAutoSync(config.syncInterval);
 		}
 	}
 
@@ -91,7 +101,11 @@ export class SyncManagerBridge {
 
 		this.autoSyncTimer = window.setInterval(async () => {
 			Logger.info('SyncManagerBridge', 'Running auto sync...');
-			await syncFeishuTasks(this.plugin, { isAutoSync: true });
+			try {
+				await syncFeishuTasks(this.plugin, { isAutoSync: true });
+			} catch (error) {
+				Logger.error('SyncManagerBridge', 'Auto sync failed', error);
+			}
 		}, intervalMs);
 
 		Logger.info('SyncManagerBridge', `Auto sync started (interval: ${intervalMinutes} minutes)`);
@@ -109,13 +123,20 @@ export class SyncManagerBridge {
 	}
 
 	/**
-	 * 销毁同步管理器
+	 * 销毁同步管理器（不含定时器）
 	 */
-	destroy(): void {
-		this.stopAutoSync();
+	private destroySyncManager(): void {
 		if (this.syncManager) {
 			this.syncManager.destroy();
 			this.syncManager = null;
 		}
+	}
+
+	/**
+	 * 销毁同步管理器
+	 */
+	destroy(): void {
+		this.stopAutoSync();
+		this.destroySyncManager();
 	}
 }

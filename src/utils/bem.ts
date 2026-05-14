@@ -406,20 +406,19 @@ export const ToolbarClasses = {
 
 		/** 标签筛选 */
 		tagFilter: {
-			container: bem(BLOCKS.TOOLBAR, 'tag-filter-container'),
-			btn: bem(BLOCKS.TOOLBAR, 'tag-filter-btn'),
 			icon: bem(BLOCKS.TOOLBAR, 'tag-filter-icon'),
-			btnHasSelection: bem(BLOCKS.TOOLBAR, 'tag-filter-btn', 'has-selection'),
 			pane: bem(BLOCKS.TOOLBAR, 'tag-filter-pane'),
+			dropdownHeader: bem(BLOCKS.TOOLBAR, 'tag-filter-dropdown-header'),
 			operators: bem(BLOCKS.TOOLBAR, 'tag-filter-operators'),
 			operatorBtn: bem(BLOCKS.TOOLBAR, 'tag-filter-operator-btn'),
 			operatorBtnActive: bem(BLOCKS.TOOLBAR, 'tag-filter-operator-btn', 'active'),
 			tagsGrid: bem(BLOCKS.TOOLBAR, 'tag-filter-tags-grid'),
-			empty: bem(BLOCKS.TOOLBAR, 'tag-filter-empty'),
 			tagItem: bem(BLOCKS.TOOLBAR, 'tag-filter-tag-item'),
 			tagItemSelected: bem(BLOCKS.TOOLBAR, 'tag-filter-tag-item', 'selected'),
+			tagCheckbox: bem(BLOCKS.TOOLBAR, 'tag-filter-tag-checkbox'),
 			tagName: bem(BLOCKS.TOOLBAR, 'tag-filter-tag-name'),
 			tagCount: bem(BLOCKS.TOOLBAR, 'tag-filter-tag-count'),
+			empty: bem(BLOCKS.TOOLBAR, 'tag-filter-empty'),
 		},
 
 		/** 字段选择器 */

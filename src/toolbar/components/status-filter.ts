@@ -111,8 +111,8 @@ export function renderStatusFilterButton(
 		} else {
 			renderDropdown();
 			const rect = statusBtn.getBoundingClientRect();
-			dropdown.style.top = `${rect.bottom + 6}px`;
-			dropdown.style.right = `${window.innerWidth - rect.right}px`;
+			dropdown.style.top = `${rect.bottom + 4}px`;
+			dropdown.style.left = `${rect.left}px`;
 			dropdown.style.display = 'block';
 		}
 	});

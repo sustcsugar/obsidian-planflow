@@ -832,42 +832,7 @@ Author: sugar
    状态筛选按钮样式（复选框多选模式，现代 UI）
    ============================================ */
 
-/* 状态筛选容器 - 下凹设计 */
-.gc-toolbar__status-filter-container {
-	display: inline-flex;
-	gap: 1px;
-	padding: 1px;
-	border-radius: 8px;
-	background-color: color-mix(in srgb, var(--background-secondary) 35%, #888 5%);
-	box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-/* 状态筛选按钮 - 下凹设计 */
-.gc-toolbar__status-filter-btn {
-	position: relative;
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	padding: 4px 8px;
-	border: none;
-	border-radius: 0;
-	background: transparent;
-	color: var(--text-muted);
-	font-size: 13px;
-	cursor: pointer;
-	transition: all 0.2s ease;
-}
-
-.gc-toolbar__status-filter-btn:hover {
-	background: var(--background-modifier-hover);
-	color: var(--text-normal);
-}
-
-.gc-toolbar__status-filter-btn--has-selection {
-	background: var(--interactive-accent);
-	color: var(--text-on-accent);
-}
-
+/* 状态筛选图标 */
 .gc-toolbar__status-filter-icon {
 	display: flex;
 	align-items: center;
@@ -879,82 +844,44 @@ Author: sugar
 }
 
 /* ============================================
-   状态筛选下拉面板样式
+   下拉面板共享样式 (BEM: gc-toolbar)
    ============================================ */
 
+/* 状态筛选下拉面板 */
 .gc-toolbar__status-filter-dropdown {
 	position: fixed;
 	z-index: 1000;
-	min-width: 200px;
-	max-width: 240px;
+	min-width: 150px;
 	background: color-mix(in srgb, var(--background-primary) 20%, transparent);
 	border: 1px solid color-mix(in srgb, var(--background-modifier-border) 50%, transparent);
 	border-radius: 8px;
+	padding: 4px 0;
 	box-shadow:
 		0 8px 24px rgba(0, 0, 0, 0.12),
 		0 2px 6px rgba(0, 0, 0, 0.08),
 		inset 0 1px 0 rgba(255, 255, 255, 0.15);
-	padding: 0;
-	overflow: hidden;
 	backdrop-filter: blur(20px) saturate(180%);
 	-webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 .gc-toolbar__status-filter-dropdown-header {
-	padding: 12px 16px;
-	border-bottom: 1px solid color-mix(in srgb, var(--background-modifier-border) 40%, transparent);
-	font-size: 13px;
-	font-weight: 600;
-	color: var(--text-normal);
-}
-
-.gc-toolbar__status-filter-dropdown-actions {
-	padding: 8px 16px;
-	border-bottom: 1px solid color-mix(in srgb, var(--background-modifier-border) 40%, transparent);
-	display: flex;
-	justify-content: flex-end;
-}
-
-.gc-toolbar__status-filter-dropdown-actions button {
-	padding: 4px 12px;
-	border: none;
-	border-radius: 4px;
-	background: transparent;
-	color: var(--text-muted);
+	padding: 8px 12px;
 	font-size: 12px;
-	cursor: pointer;
-	transition: all 0.15s ease;
-}
-
-.gc-toolbar__status-filter-dropdown-actions button:hover {
-	background: var(--background-modifier-hover);
-	color: var(--text-normal);
+	font-weight: 600;
+	color: var(--text-muted);
+	border-bottom: 1px solid color-mix(in srgb, var(--background-modifier-border) 40%, transparent);
+	margin-bottom: 4px;
 }
 
 .gc-toolbar__status-filter-list {
-	max-height: 280px;
-	overflow-y: auto;
-	padding: 4px;
-}
-
-.gc-toolbar__status-filter-list::-webkit-scrollbar {
-	width: 6px;
-}
-
-.gc-toolbar__status-filter-list::-webkit-scrollbar-track {
-	background: transparent;
-}
-
-.gc-toolbar__status-filter-list::-webkit-scrollbar-thumb {
-	background: var(--background-modifier-border);
-	border-radius: 3px;
+	padding: 0;
 }
 
 .gc-toolbar__status-filter-item {
 	display: flex;
 	align-items: center;
-	gap: 10px;
-	padding: 8px 10px;
+	gap: 8px;
+	padding: 5px 12px;
 	border-radius: 6px;
 	cursor: pointer;
 	transition: all 0.15s ease;
@@ -962,120 +889,44 @@ Author: sugar
 
 .gc-toolbar__status-filter-item:hover {
 	background: color-mix(in srgb, var(--interactive-accent) 15%, transparent);
-	backdrop-filter: blur(8px);
 }
 
 .gc-toolbar__status-filter-item--selected {
 	background: color-mix(in srgb, var(--interactive-accent) 25%, transparent);
-	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-/* 复选框 */
+.gc-toolbar__status-checkbox {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	width: 16px;
+	height: 16px;
+	border: 1.5px solid var(--background-modifier-border-hover);
+	border-radius: 3px;
+}
+
 .gc-toolbar__status-checkbox svg {
 	display: block;
-	flex-shrink: 0;
+	width: 12px;
+	height: 12px;
 }
 
-/* 状态标签 - 胶囊样式 */
 .gc-toolbar__status-label {
 	flex: 0 0 auto;
 	display: inline-flex;
 	align-items: center;
-	padding: 4px 10px;
-	border-radius: 12px;
-	font-size: 13px;
-	line-height: 1;
+	padding: 2px 8px;
+	border-radius: 10px;
+	font-size: 12px;
 	white-space: nowrap;
 }
 
-/* 空状态 */
 .gc-toolbar__status-filter-empty {
-	padding: 24px 16px;
+	padding: 16px 12px;
 	text-align: center;
 	color: var(--text-muted);
 	font-size: 12px;
-}
-
-/* 排序按钮 */
-.gc-toolbar__sort-btn {
-	padding: 4px 10px;
-	border: none;
-	border-radius: 4px;
-	background-color: transparent;
-	color: var(--text-normal);
-	font-size: 13px;
-	cursor: pointer;
-	transition: all 0.2s ease;
-	display: inline-flex;
-	align-items: center;
-	gap: 4px;
-}
-
-.gc-toolbar__sort-btn:hover {
-	background-color: var(--background-modifier-hover);
-}
-
-/* 标签筛选按钮 */
-.gc-toolbar__tag-filter-btn {
-	padding: 4px 10px;
-	border: none;
-	border-radius: 4px;
-	background-color: transparent;
-	color: var(--text-normal);
-	font-size: 13px;
-	cursor: pointer;
-	transition: all 0.2s ease;
-	display: inline-flex;
-	align-items: center;
-	gap: 4px;
-}
-
-.gc-toolbar__tag-filter-btn:hover {
-	background-color: var(--background-modifier-hover);
-}
-
-.gc-toolbar__tag-filter-btn--has-selection {
-	background-color: var(--interactive-accent);
-	color: var(--text-on-accent);
-}
-
-/* 标签筛选按钮图标 */
-.gc-toolbar__tag-filter-icon {
-	font-size: 12px;
-	line-height: 1;
-}
-
-/* 标签筛选数量徽章 */
-.gc-toolbar__tag-filter-count {
-	background-color: var(--interactive-accent);
-	color: white;
-	font-size: 9px;
-	font-weight: 600;
-	padding: 1px 4px;
-	border-radius: 6px;
-	min-width: 14px;
-	text-align: center;
-	line-height: 1.1;
-}
-
-.gc-toolbar__tag-filter-btn--has-selection .gc-toolbar__tag-filter-count {
-	background-color: white;
-	color: var(--interactive-accent);
-}
-
-/* 字段选择器 */
-.gc-toolbar__field-selector-label {
-	display: none;
-}
-
-.gc-toolbar__field-selector-select {
-	padding: 4px 8px;
-	border: none;
-	border-radius: 4px;
-	background-color: transparent;
-	color: var(--text-normal);
-	font-size: 12px;
-	cursor: pointer;
 }
 
 /* ============================================
@@ -1087,9 +938,9 @@ Author: sugar
 	z-index: 1000;
 	background: color-mix(in srgb, var(--background-primary) 20%, transparent);
 	border: 1px solid color-mix(in srgb, var(--background-modifier-border) 50%, transparent);
-	border-radius: 6px;
+	border-radius: 8px;
 	padding: 4px 0;
-	min-width: 160px;
+	min-width: 150px;
 	box-shadow:
 		0 8px 24px rgba(0, 0, 0, 0.12),
 		0 2px 6px rgba(0, 0, 0, 0.08),
@@ -1100,7 +951,8 @@ Author: sugar
 
 .gc-toolbar__sort-dropdown-header {
 	padding: 8px 12px;
-	font-size: 11px;
+	font-size: 12px;
+	font-weight: 600;
 	color: var(--text-muted);
 	border-bottom: 1px solid color-mix(in srgb, var(--background-modifier-border) 40%, transparent);
 	margin-bottom: 4px;
@@ -1110,7 +962,7 @@ Author: sugar
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	padding: 8px 12px;
+	padding: 5px 12px;
 	cursor: pointer;
 	transition: all 0.15s ease;
 	user-select: none;
@@ -1118,34 +970,32 @@ Author: sugar
 
 .gc-toolbar__sort-menu-item:hover {
 	background: color-mix(in srgb, var(--interactive-accent) 15%, transparent);
-	backdrop-filter: blur(8px);
 }
 
 .gc-toolbar__sort-menu-item--active {
 	background: color-mix(in srgb, var(--interactive-accent) 25%, transparent);
 	color: var(--interactive-accent);
-	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .gc-toolbar__sort-option-icon {
-	font-size: 14px;
-	width: 20px;
+	font-size: 12px;
+	width: 18px;
 	text-align: center;
 }
 
 .gc-toolbar__sort-option-label {
 	flex: 1;
-	font-size: 13px;
+	font-size: 12px;
 }
 
 .gc-toolbar__sort-option-indicator {
-	font-size: 12px;
-	width: 20px;
+	font-size: 11px;
+	width: 18px;
 	text-align: right;
 }
 
 .gc-toolbar__sort-icon {
-	font-size: 14px;
+	font-size: 12px;
 }
 
 .gc-toolbar__sort-dropdown-icon {
@@ -1154,20 +1004,19 @@ Author: sugar
 }
 
 /* ============================================
-   标签筛选下拉菜单样式 (BEM: gc-toolbar)
+   标签筛选下拉面板样式 (BEM: gc-toolbar)
    ============================================ */
 
 .gc-toolbar__tag-filter-pane {
 	position: fixed;
 	z-index: 1000;
+	min-width: 200px;
+	max-height: 320px;
+	overflow-y: auto;
 	background: color-mix(in srgb, var(--background-primary) 20%, transparent);
 	border: 1px solid color-mix(in srgb, var(--background-modifier-border) 50%, transparent);
-	border-radius: 6px;
-	padding: 4px 6px;
-	min-width: 140px;
-	max-width: 180px;
-	max-height: 280px;
-	overflow-y: auto;
+	border-radius: 8px;
+	padding: 0;
 	box-shadow:
 		0 8px 24px rgba(0, 0, 0, 0.12),
 		0 2px 6px rgba(0, 0, 0, 0.08),
@@ -1193,141 +1042,124 @@ Author: sugar
 	background: var(--text-muted);
 }
 
+.gc-toolbar__tag-filter-dropdown-header {
+	padding: 8px 12px;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text-muted);
+	border-bottom: 1px solid color-mix(in srgb, var(--background-modifier-border) 40%, transparent);
+	margin-bottom: 4px;
+}
+
 .gc-toolbar__tag-filter-operators {
 	display: flex;
-	gap: 1px;
-	padding-bottom: 3px;
+	gap: 6px;
+	padding: 4px 8px 8px;
 	margin-bottom: 4px;
 	border-bottom: 1px solid color-mix(in srgb, var(--background-modifier-border) 40%, transparent);
 }
 
 .gc-toolbar__tag-filter-operator-btn {
-	flex: 0 1 auto;
-	padding: 2px 3px;
-	border: 1px solid var(--background-modifier-border);
-	background: var(--background-primary);
-	border-radius: 3px;
+	flex: 1;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 4px 14px;
+	border-radius: 9999px;
 	cursor: pointer;
-	font-size: 10px;
-	font-weight: 500;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: -0.12px;
+	user-select: none;
+	background: transparent;
 	color: var(--text-muted);
-	transition: all 0.12s ease;
-	text-align: center;
-	line-height: 1.4;
-	min-width: 24px;
+	border: 1px solid var(--background-modifier-border);
+	transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
 }
 
 .gc-toolbar__tag-filter-operator-btn:hover {
 	background: var(--background-modifier-hover);
+	color: var(--text-normal);
 }
 
 .gc-toolbar__tag-filter-operator-btn--active {
 	background: var(--interactive-accent);
-	color: white;
+	color: var(--text-on-accent);
 	border-color: var(--interactive-accent);
 }
 
-.gc-toolbar__tag-filter-tags-grid {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 3px;
+.gc-toolbar__tag-filter-operator-btn--active:hover {
+	filter: brightness(1.1);
 }
 
-.gc-toolbar__tag-filter-empty {
-	padding: 12px;
-	text-align: center;
-	color: var(--text-muted);
-	font-size: 11px;
+.gc-toolbar__tag-filter-tags-grid {
+	padding: 0 4px 4px;
 }
 
 .gc-toolbar__tag-filter-tag-item {
-	display: inline-flex;
+	display: flex;
 	align-items: center;
-	gap: 2px;
-	padding: 2px 5px;
-	border: 1px solid var(--background-modifier-border);
-	border-radius: 10px;
-	background: var(--background-primary);
+	gap: 8px;
+	padding: 5px 8px;
+	border-radius: 6px;
 	cursor: pointer;
 	transition: all 0.12s ease;
 	user-select: none;
-	font-size: 11px;
 }
 
 .gc-toolbar__tag-filter-tag-item:hover {
-	background: var(--background-modifier-hover);
-	border-color: var(--background-modifier-border-hover);
+	background: color-mix(in srgb, var(--interactive-accent) 15%, transparent);
 }
 
-/* 选中状态 - 更显眼的样式 */
 .gc-toolbar__tag-filter-tag-item--selected {
-	/* 使用深色渐变背景，确保白色文字清晰可见 */
-	background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
-	border-color: #7c3aed;
-	color: rgb(15, 14, 14);
-	/* 添加外发光效果 */
-	box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3), 0 2px 8px rgba(139, 92, 246, 0.4);
-	/* 轻微放大 */
-	transform: scale(1.05);
+	background: color-mix(in srgb, var(--interactive-accent) 25%, transparent);
+}
+
+.gc-toolbar__tag-filter-tag-checkbox {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	width: 16px;
+	height: 16px;
+	border: 1.5px solid var(--background-modifier-border-hover);
+	border-radius: 3px;
+}
+
+.gc-toolbar__tag-filter-tag-checkbox svg {
+	display: block;
+	width: 12px;
+	height: 12px;
 }
 
 .gc-toolbar__tag-filter-tag-name {
-	font-size: 11px;
-	font-weight: 500;
+	flex: 1;
+	font-size: 12px;
 	color: var(--text-normal);
-	line-height: 1.2;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .gc-toolbar__tag-filter-tag-item--selected .gc-toolbar__tag-filter-tag-name {
-	color: white;
 	font-weight: 600;
-	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .gc-toolbar__tag-filter-tag-count {
-	font-size: 9px;
+	font-size: 11px;
 	color: var(--text-muted);
 	background: var(--background-modifier-border);
-	padding: 1px 4px;
-	border-radius: 6px;
+	padding: 1px 6px;
+	border-radius: 8px;
 	font-weight: 500;
-	line-height: 1;
+	flex-shrink: 0;
 }
 
-.gc-toolbar__tag-filter-tag-item--selected .gc-toolbar__tag-filter-tag-count {
-	background: rgba(255, 255, 255, 0.9);
-	color: #7c3aed;
-	font-weight: 600;
-}
-
-/* 选中状态的悬停 - 保持紫色效果 */
-.gc-toolbar__tag-filter-tag-item--selected:hover {
-	background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
-	border-color: #7c3aed;
-	box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.4), 0 4px 12px rgba(139, 92, 246, 0.5);
-	transform: scale(1.08);
-}
-
-/* 响应式适配 */
-@media (max-width: 768px) {
-	.gc-toolbar__tag-filter-pane {
-		min-width: 120px;
-		max-width: 160px;
-	}
-
-	.gc-toolbar__tag-filter-tag-item {
-		font-size: 10px;
-		padding: 2px 5px;
-	}
-
-	.gc-toolbar__tag-filter-tag-name {
-		font-size: 10px;
-	}
-
-	.gc-toolbar__tag-filter-tag-count {
-		font-size: 8px;
-		padding: 1px 3px;
-	}
+.gc-toolbar__tag-filter-empty {
+	padding: 16px 12px;
+	text-align: center;
+	color: var(--text-muted);
+	font-size: 12px;
 }
 
 /* 6.2 Task Card Component (统一任务卡片) */
@@ -1481,7 +1313,7 @@ Author: sugar
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
-	font-size: 11px;
+	font-size: 12px;
 	font-weight: 500;
 	padding: 3px 8px;
 	background-color: var(--background-primary);
@@ -1490,7 +1322,7 @@ Author: sugar
 	color: var(--text-normal);
 	flex-shrink: 0;
 	white-space: nowrap;
-	transition: all 0.2s ease;
+	transition: all 0.15s ease;
 	cursor: default;
 	user-select: none;
 }
@@ -1509,33 +1341,27 @@ Author: sugar
 	transform: scale(0.96);
 }
 
-/* 选中状态 - 紫色发光效果 */
+/* 选中状态 */
 .gc-tag--selected {
-	background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
-	border-color: #7c3aed;
-	color: white;
-	box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3), 0 2px 8px rgba(139, 92, 246, 0.4);
-	transform: scale(1.05);
+	background: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+	color: var(--text-on-accent);
 }
 
 .gc-tag--selected .gc-tag__label {
-	color: white;
+	color: var(--text-on-accent);
 	font-weight: 600;
-	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .gc-tag--selected .gc-tag__suffix {
-	background: rgba(255, 255, 255, 0.9);
-	color: #7c3aed;
+	background: rgba(255, 255, 255, 0.25);
+	color: var(--text-on-accent);
 	font-weight: 600;
 }
 
-/* 选中状态的悬停 - 保持紫色效果 */
 .gc-tag--selected:hover {
-	background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
-	border-color: #7c3aed;
-	box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.4), 0 4px 12px rgba(139, 92, 246, 0.5);
-	transform: scale(1.08);
+	background: var(--interactive-accent-hover);
+	border-color: var(--interactive-accent-hover);
 }
 
 /* Elements */
@@ -1544,11 +1370,11 @@ Author: sugar
 }
 
 .gc-tag__suffix {
-	font-size: 9px;
+	font-size: 10px;
 	color: var(--text-muted);
 	background-color: var(--background-modifier-border);
-	padding: 1px 4px;
-	border-radius: 6px;
+	padding: 1px 5px;
+	border-radius: 8px;
 	font-weight: 500;
 	line-height: 1;
 }

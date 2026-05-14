@@ -79,11 +79,8 @@ export class SyncManager {
             this.resolver.setFieldMergeRules(config.fieldMergeRules);
         }
 
-        // 重启自动同步
+        // 自动同步由 SyncManagerBridge 管理，此处仅停止 SyncManager 自身的废弃定时器
         this.stopAutoSync();
-        if (this.configuration.syncInterval > 0) {
-            this.startAutoSync();
-        }
     }
 
     /**
