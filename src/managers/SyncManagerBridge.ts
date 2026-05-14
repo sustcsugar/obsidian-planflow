@@ -31,9 +31,10 @@ export class SyncManagerBridge {
 			return;
 		}
 
-		// 检查是否启用了任何同步源
-		if (!config.enabledSources?.api && !config.enabledSources?.caldav) {
-			Logger.info('SyncManagerBridge', 'No sync sources enabled');
+		// 同步源可用性判断：基于实际认证配置而非 enabledSources 开关
+		// （enabledSources 开关在 380bf8c 重构中被移除，但检查逻辑未同步更新）
+		const hasSyncCapability = this.hasSyncCapability(config);
+		if (!hasSyncCapability) {
 			return;
 		}
 
@@ -47,7 +48,6 @@ export class SyncManagerBridge {
 			Logger.error('SyncManagerBridge', 'Failed to initialize sync manager', error);
 		}
 
-		// 自动同步不依赖 syncManager，直接使用 syncFeishuTasks
 		if (config.syncInterval > 0) {
 			this.startAutoSync(config.syncInterval);
 		}
@@ -57,7 +57,6 @@ export class SyncManagerBridge {
 	 * 更新配置（当设置变化时调用）
 	 */
 	async updateConfiguration(config?: SyncConfiguration): Promise<void> {
-		// 始终先停止现有定时器
 		this.stopAutoSync();
 
 		if (!config) {
@@ -65,12 +64,11 @@ export class SyncManagerBridge {
 			return;
 		}
 
-		const hasEnabledSources = config.enabledSources?.api || config.enabledSources?.caldav;
+		const hasSyncCapability = this.hasSyncCapability(config);
 
-		if (!hasEnabledSources) {
+		if (!hasSyncCapability) {
 			this.destroySyncManager();
 		} else if (!this.syncManager) {
-			// syncManager 不存在，重新初始化
 			try {
 				this.syncManager = createSyncManager(config);
 				if (this.syncManager) {
@@ -80,12 +78,10 @@ export class SyncManagerBridge {
 				Logger.error('SyncManagerBridge', 'Failed to re-initialize sync manager', error);
 			}
 		} else {
-			// 更新现有配置（不再调用 SyncManager 的 startAutoSync）
 			this.syncManager.updateConfiguration(config);
 		}
 
-		// 自动同步不依赖 syncManager
-		if (config.syncInterval > 0 && hasEnabledSources) {
+		if (config.syncInterval > 0 && hasSyncCapability) {
 			this.startAutoSync(config.syncInterval);
 		}
 	}
@@ -94,7 +90,6 @@ export class SyncManagerBridge {
 	 * 启动自动同步
 	 */
 	private startAutoSync(intervalMinutes: number): void {
-		// 清除现有定时器
 		this.stopAutoSync();
 
 		const intervalMs = intervalMinutes * 60 * 1000;
@@ -120,6 +115,24 @@ export class SyncManagerBridge {
 			this.autoSyncTimer = undefined;
 			Logger.info('SyncManagerBridge', 'Auto sync stopped');
 		}
+	}
+
+	/**
+	 * 判断是否具备同步能力
+	 *
+	 * 兼容旧版 enabledSources 开关（data.json 中可能仍保存了 { api: true }），
+	 * 同时支持新版无开关模式：只要配置了 API 认证信息即视为可同步。
+	 */
+	private hasSyncCapability(config: SyncConfiguration): boolean {
+		// 旧版兼容：用户曾通过开关启用过
+		if (config.enabledSources?.api || config.enabledSources?.caldav) {
+			return true;
+		}
+		// 新版：有飞书认证配置即视为可同步
+		if (config.api?.accessToken && (config.api.clientId || config.api.appId)) {
+			return true;
+		}
+		return false;
 	}
 
 	/**
