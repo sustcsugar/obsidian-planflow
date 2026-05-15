@@ -100,7 +100,7 @@ export class TaskListTab {
 
 		// 标签筛选按钮
 		const tagBtn = filterBar.createEl('button', { cls: 'clickable-icon' });
-		setIcon(tagBtn, 'tag');
+		setIcon(tagBtn, 'tags');
 		tagBtn.title = '标签筛选';
 		tagBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
