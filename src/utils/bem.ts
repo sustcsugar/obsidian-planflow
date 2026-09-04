@@ -767,6 +767,10 @@ export const MonthViewClasses = {
 		tasks: bem(BLOCKS.MONTH_VIEW, 'tasks'),
 		taskItem: bem(BLOCKS.MONTH_VIEW, 'task-item'),
 		taskMore: bem(BLOCKS.MONTH_VIEW, 'task-more'),
+		// 跨日横跨条带
+		spanStrip: bem(BLOCKS.MONTH_VIEW, 'span-strip'),
+		spanBar: bem(BLOCKS.MONTH_VIEW, 'span-bar'),
+		spanBarTime: bem(BLOCKS.MONTH_VIEW, 'span-bar-time'),
 	},
 
 	/** Modifiers */
@@ -777,6 +781,9 @@ export const MonthViewClasses = {
 		festivalSolar: bem(BLOCKS.MONTH_VIEW, 'lunar-text', 'festival-solar'),
 		festivalLunar: bem(BLOCKS.MONTH_VIEW, 'lunar-text', 'festival-lunar'),
 		festivalSolarTerm: bem(BLOCKS.MONTH_VIEW, 'lunar-text', 'festival-solar-term'),
+		spanBarContinuesBefore: bem(BLOCKS.MONTH_VIEW, 'span-bar', 'continues-before'),
+		spanBarContinuesAfter: bem(BLOCKS.MONTH_VIEW, 'span-bar', 'continues-after'),
+		spanBarStacked: bem(BLOCKS.MONTH_VIEW, 'span-bar', 'stacked'),
 		weekdayEmpty: bem(BLOCKS.MONTH_VIEW, 'weekday', 'empty'),
 	},
 };
