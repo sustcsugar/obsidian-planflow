@@ -12,6 +12,8 @@ import { TaskView } from './views/TaskView';
 import { GanttView } from './views/GanttView';
 import type { CalendarViewType } from '../types';
 import { MOTION, easeOutTransition } from './motion';
+import { useEffect } from 'react';
+import { isPhoneNow } from './utils/platform';
 
 function renderView(viewType: CalendarViewType): JSX.Element {
 	switch (viewType) {
@@ -35,6 +37,12 @@ function renderView(viewType: CalendarViewType): JSX.Element {
  * 结构：.gantt-calendar-app > (.calendar-toolbar + .calendar-content)
  */
 export function App(): JSX.Element {
+	// 视图形态类手机样式信号（CSS 用 body.gc-is-phone 作用域，桌面窄窗口不触发）
+	useEffect(() => {
+		document.body.classList.toggle('gc-is-phone', isPhoneNow());
+		return () => document.body.classList.remove('gc-is-phone');
+	}, []);
+
 	const viewType = useCalendarStore((s) => s.viewType);
 	const settingsVersion = useCalendarStore((s) => s.settingsVersion);
 
