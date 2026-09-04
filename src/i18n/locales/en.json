@@ -1302,7 +1302,9 @@
         "Fri",
         "Sat"
       ],
-      "allDay": "All Day"
+      "allDay": "All Day",
+      "alldayMore": "{{count}} more all-day tasks…",
+      "alldayCollapse": "Collapse all-day tasks"
     },
     "dayView": {
       "todayTasks": "Today's Tasks",
