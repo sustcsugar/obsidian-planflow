@@ -18,7 +18,6 @@ import {
 	buildDayTimelineModel,
 	HOUR_PX,
 	MINUTES_PER_DAY,
-	DEFAULT_POINT_DURATION_MIN,
 	type TimeBlockSegment,
 	type LaneInfo,
 } from '../timelineModel';
@@ -39,7 +38,7 @@ const mkTask = (over: Partial<GCTask>): GCTask => ({
 	completed: false,
 	priority: 'normal',
 	...over,
-} as GCTask);
+});
 
 const mkPoint = (startMin: number, endMin: number, continuesBefore = false, continuesAfter = false): TimeBlockSegment & LaneInfo => ({
 	dayIndex: 0,

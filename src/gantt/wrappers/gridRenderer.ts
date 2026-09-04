@@ -43,7 +43,7 @@ export function renderGrid(
 	opts: GridRenderOptions,
 	rowBgStorage: SVGRectElement[]
 ): void {
-	const { svg, minDate, totalUnits, granularity, columnWidth, rowHeight, tasksLength, width, height } = opts;
+	const { svg, totalUnits, granularity, columnWidth, rowHeight, tasksLength, width, height } = opts;
 	if (!svg) return;
 
 	const gridGroup = activeDocument.createElementNS(ns, 'g');
