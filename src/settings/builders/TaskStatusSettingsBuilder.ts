@@ -1,4 +1,4 @@
-import { Setting, SettingGroup } from 'obsidian';
+import { Setting } from 'obsidian';
 import { BaseBuilder } from './BaseBuilder';
 import { TaskStatusCard } from '../components';
 import { AddCustomStatusModal, EditCustomStatusModal } from '../modals';

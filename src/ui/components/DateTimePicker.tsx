@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type JSX } from 'react';
 import { createPortal } from 'react-dom';
-import { DateTimePickerClasses } from '../../utils/bem';
+import { DateTimePickerClasses, setCssProps } from '../../utils/bem';
 import { formatDate } from '../../dateUtils/dateUtilsIndex';
 import { i18n } from '../../i18n/i18n';
 import { Icon } from './Icon';
@@ -14,17 +14,7 @@ export interface DateTimePickerProps {
 	placeholder?: string;
 }
 
-const TIME_RE = /^(\d{1,2}):(\d{2})$/;
 const WEEKDAY_OFFSET = 6; // 周一为每周第一天：getDay() 周日(0) → 列 6
-
-function parseTimeText(text: string): { h: number; m: number } | null {
-	const match = TIME_RE.exec(text.trim());
-	if (!match) return null;
-	const h = Number(match[1]);
-	const m = Number(match[2]);
-	if (h > 23 || m > 59) return null;
-	return { h, m };
-}
 
 function isSameDay(a: Date | null, b: Date): boolean {
 	return !!a && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
@@ -88,11 +78,8 @@ export function DateTimePicker({ value, onChange, placeholder }: DateTimePickerP
 	// portal 挂载容器：带 block 类，使 `.gc-date-time-picker .gc-date-time-picker__xxx`
 	// 后代选择器在 body 下继续匹配（否则面板布局整体失效）；零尺寸不占布局
 	const [containerEl] = useState(() => {
-		const el = document.createElement('div');
-		el.className = DateTimePickerClasses.block;
-		el.style.width = '0';
-		el.style.height = '0';
-		el.style.overflow = 'visible';
+		const el = createDiv(DateTimePickerClasses.block);
+		setCssProps(el, { width: '0', height: '0', overflow: 'visible' });
 		document.body.appendChild(el);
 		return el;
 	});
@@ -164,7 +151,7 @@ export function DateTimePicker({ value, onChange, placeholder }: DateTimePickerP
 	useEffect(() => {
 		if (!open || !popoverRef.current) return;
 		popoverRef.current.querySelectorAll<HTMLElement>('[data-selected="true"]').forEach(el => {
-			const wrap = el.parentElement as HTMLElement | null;
+			const wrap = el.parentElement;
 			if (wrap) wrap.scrollTop = el.offsetTop - wrap.clientHeight / 2 + el.clientHeight / 2;
 		});
 	}, [open, draft, viewMonth, viewYear]);

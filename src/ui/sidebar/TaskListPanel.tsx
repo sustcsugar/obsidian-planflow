@@ -11,11 +11,10 @@ import { isThisWeek } from '../../dateUtils/week';
 import { isThisMonth } from '../../dateUtils/dateCompare';
 import { i18n } from '../../i18n/i18n';
 import { TagTreeFilter } from '../components/TagTreeFilter';
-import type { TagNode } from '../../tasks/tags/TagHierarchy';
 import { usePlugin, useApp } from '../pluginContext';
 import { useCalendarStore } from '../store/calendarStore';
 import { TaskCard } from '../components/TaskCard';
-import { DropdownMenu, DropdownMenuClasses, type DropdownMenuSection } from '../components/DropdownMenu';
+import { DropdownMenu, type DropdownMenuSection } from '../components/DropdownMenu';
 import { Icon } from '../components/Icon';
 
 type PriorityFilter = 'all' | 'highest' | 'high' | 'medium' | 'normal' | 'low' | 'lowest';

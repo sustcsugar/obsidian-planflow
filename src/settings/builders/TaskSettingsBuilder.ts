@@ -1,4 +1,4 @@
-import { Setting, SettingGroup } from 'obsidian';
+import { Setting } from 'obsidian';
 import { BaseBuilder } from './BaseBuilder';
 import { FolderSuggest } from '../components';
 import type { BuilderConfig } from '../types';

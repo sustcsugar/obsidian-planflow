@@ -1,4 +1,4 @@
-import { Setting, SettingGroup } from 'obsidian';
+import { Setting } from 'obsidian';
 import { BaseBuilder } from './BaseBuilder';
 import type { BuilderConfig, DateFieldType } from '../types';
 import { i18n } from '../../i18n/i18n';

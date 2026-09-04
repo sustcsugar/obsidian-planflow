@@ -14,6 +14,7 @@ import type { TagNode } from '../../tasks/tags/TagHierarchy';
 import { Icon } from './Icon';
 import { TagPill } from '../../components/tagPill';
 import { i18n } from '../../i18n/i18n';
+import { setCssProps } from '../../utils/bem';
 
 export interface TagTreeFilterProps {
 	allTags: string[];
@@ -166,8 +167,8 @@ export function TagTreeFilter({
 						borderLeft: isSelected ? '2px solid var(--interactive-accent)' : '2px solid transparent',
 						minHeight: '28px',
 					}}
-					onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--background-modifier-hover)'; }}
-					onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
+					onMouseEnter={(e) => { if (!isSelected) setCssProps(e.currentTarget, { background: 'var(--background-modifier-hover)' }); }}
+					onMouseLeave={(e) => { if (!isSelected) setCssProps(e.currentTarget, { background: 'transparent' }); }}
 				>
 					<span style={{ width: `${level * 12}px`, flexShrink: 0 }} />
 					{hasChildren ? (

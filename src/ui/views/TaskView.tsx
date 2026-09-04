@@ -1,6 +1,5 @@
 import { useCallback, useMemo, type JSX } from 'react';
 import { taskKey } from '../utils/taskKey';
-import type { GCTask } from '../../types';
 import { getTaskDateField } from '../../types';
 import { TaskViewConfig } from '../../components/TaskCard';
 import { TaskViewClasses, ViewClasses } from '../../utils/bem';

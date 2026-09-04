@@ -35,9 +35,6 @@ function updateTaskBarVisual(
 	const HANDLE_HIT_AREA = 12;
 	const HANDLE_VISUAL_SIZE = 4;
 
-	// 重新导入几何函数（ESM 静态 import，避免循环）
-	const { findStartGridUnitIndex: findStart, findEndGridUnitIndex: findEnd, getGridUnitX: getX } = require('./dateGeometry') as typeof import('./dateGeometry');
-
 	const startUnitIndex = findStartGridUnitIndex(newStart, minDate, { columnWidth: ctx.columnWidth, granularity: ctx.granularity });
 	const endUnitIndex = findEndGridUnitIndex(newEnd, minDate, { columnWidth: ctx.columnWidth, granularity: ctx.granularity });
 	const rowIndex = Math.max(0, ctx.tasks.findIndex(t => t.id === dragState.task?.id));
@@ -79,8 +76,6 @@ function updateTaskBarVisual(
 	// 同步更新引导条（创建 → 开始）
 	const barGroup = barEl?.parentElement as SVGGElement | null;
 	if (barGroup) {
-		// 使用日期几何函数重新计算引导条位置
-		const { findStartGridUnitIndex: findStart, getGridUnitX: getX } = require('./dateGeometry') as typeof import('./dateGeometry');
 		const leadBar = barGroup.querySelector('.gc-gantt-view__lead-bar');
 		if (leadBar) {
 			const task = dragState.task;
@@ -149,7 +144,7 @@ export function createTaskDragController(
 		minDate: Date
 	): void {
 		// 触屏：拖动元素禁止浏览器手势接管，pointer 拖动才能生效
-		barGroup.style.setProperty('touch-action', 'none');
+		setCssProps(barGroup as unknown as HTMLElement, { touchAction: 'none' });
 		leftHandle.addEventListener('pointerdown', (e: PointerEvent) => {
 			e.preventDefault();
 			e.stopPropagation();
@@ -276,7 +271,7 @@ export function createTaskDragController(
 	function handleDragEnd(e: PointerEvent): void {
 		if (!state.isDragging) return;
 
-		const { task, dragType, originalStart, originalEnd, startX, hasMoved } = state;
+		const { task, dragType, startX, hasMoved } = state;
 
 		state.isDragging = false;
 		setCssProps(activeDocument.body, { cursor: '', userSelect: '' });
