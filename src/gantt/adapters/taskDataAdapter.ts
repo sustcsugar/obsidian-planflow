@@ -5,6 +5,7 @@
 
 import type { GCTask } from '../../types';
 import { getTaskDateField } from '../../types';
+import { buildIntervalTimeLabel } from '../../ui/views/week/timelineModel';
 import type { GanttChartTask, DateFieldType } from '../types';
 import type { StatusFilterState } from '../../types';
 
@@ -69,6 +70,11 @@ export class TaskDataAdapter {
 		return {
 			id: id ?? this.generateTaskId(task),
 			name: task.description || '无标题任务',
+			timeLabel: buildIntervalTimeLabel(
+				startDate, normalizedEndDate,
+				task.datePrecision?.[startField] === 'time',
+				task.datePrecision?.[endField] === 'time'
+			),
 			start: this.formatDate(startDate),
 			end: this.formatDate(normalizedEndDate),
 			leadStart,

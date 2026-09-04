@@ -420,6 +420,7 @@ export const GanttClasses = {
 		stickyHeader: bem(BLOCKS.GANTT, 'sticky-header'),
 		leadBar: bem(BLOCKS.GANTT, 'lead-bar'),
 		handleLeft: bem(BLOCKS.GANTT, 'handle-left'),
+		barTime: bem(BLOCKS.GANTT, 'bar-time'),
 		handleRight: bem(BLOCKS.GANTT, 'handle-right'),
 		emptyState: 'gantt-empty-state',
 		emptyIcon: 'gantt-empty-icon',

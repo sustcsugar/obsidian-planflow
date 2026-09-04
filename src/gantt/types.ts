@@ -48,6 +48,8 @@ export interface GanttChartTask {
 	leadStart?: string;
 	/** Which source field actually provided the draggable start */
 	startSourceField?: DateFieldType;
+	/** 起止时刻标注（如 "09:00 → 18:00"），任一端点带时刻时生成；与时间画布语义一致 */
+	timeLabel?: string;
 
 	/** 原始任务内容（保留完整格式用于写回） */
 	content?: string;
@@ -157,7 +159,7 @@ export interface GanttViewState {
 	/** 状态筛选 */
 	statusFilter: StatusFilterState;
 	/** 时间颗粒度（仅支持周视图） */
-	timeGranularity: 'week';
+	timeGranularity: 'day';
 	/** 当前视图模式 */
 	viewMode: GanttViewMode;
 }
@@ -184,7 +186,7 @@ export interface GanttStyleConfig {
  * 时间颗粒度枚举（仅支持周视图）
  */
 export enum TimeGranularity {
-	WEEK = 'week'
+	DAY = 'day'
 }
 
 /**
@@ -205,8 +207,8 @@ export interface GranularityConfig {
  * 颗粒度配置映射表（仅周视图）
  */
 export const GRANULARITY_CONFIGS: Record<TimeGranularity, GranularityConfig> = {
-	[TimeGranularity.WEEK]: {
-		granularity: TimeGranularity.WEEK,
+	[TimeGranularity.DAY]: {
+		granularity: TimeGranularity.DAY,
 		milliseconds: 24 * 60 * 60 * 1000,
 		labelFormatter: (date: Date) => `${date.getMonth() + 1}/${date.getDate()}`,
 		gridAligner: (date: Date) => {

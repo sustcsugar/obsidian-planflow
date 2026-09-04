@@ -476,3 +476,9 @@
 body.gc-is-phone {
 	--task-column-width: 150px;
 }
+
+/* 甘特条尾时刻标注（任一端点带时刻的任务） */
+.gc-gantt-view__bar-time {
+	font-variant-numeric: tabular-nums;
+	user-select: none;
+}

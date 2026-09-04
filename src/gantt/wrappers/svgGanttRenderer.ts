@@ -61,7 +61,7 @@ export class SvgGanttRenderer {
 	private app: App | null;  // Obsidian App 实例
 
 	// 时间颗粒度
-	private granularity: TimeGranularity = TimeGranularity.WEEK;
+	private granularity: TimeGranularity = TimeGranularity.DAY;
 
 	// 尺寸相关
 	private headerHeight = 50;
@@ -129,7 +129,7 @@ export class SvgGanttRenderer {
 		this.padding = config.padding ?? 18;
 
 		// 初始化时间颗粒度
-		this.granularity = config.granularity ?? TimeGranularity.WEEK;
+		this.granularity = config.granularity ?? TimeGranularity.DAY;
 	}
 
 	/**
@@ -1187,6 +1187,19 @@ export class SvgGanttRenderer {
 				elem.setAttribute('opacity', '0.4');
 				progressElement = elem;
 				elem.classList.add('task-progress');
+			}
+
+			// 条尾时刻标注：任一端点带时刻的任务（与时间画布 timeLabel 同语义）
+			let timeBadge: SVGTextElement | null = null;
+			if (task.timeLabel) {
+				timeBadge = activeDocument.createElementNS(ns, 'text') as SVGTextElement;
+				timeBadge.setAttribute('x', String(x + barWidth + 6));
+				timeBadge.setAttribute('y', String(y + 16));
+				timeBadge.setAttribute('font-size', '9');
+				timeBadge.setAttribute('fill', 'var(--text-muted)');
+				timeBadge.setAttribute('pointer-events', 'none');
+				timeBadge.classList.add(GanttClasses.elements.barTime);
+				timeBadge.textContent = task.timeLabel;
 			}
 
 			// === 添加拖动手柄 ===
