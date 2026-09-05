@@ -23,6 +23,11 @@ import type { DateFieldType } from '../../settings/types';
 const SPAN_ROW_PX = 20;
 /** 横跨条带与格内内容之间的间隙 */
 const SPAN_STRIP_GAP_PX = 4;
+/**
+ * 横跨条带顶部让位：日期头部高度（格 padding-top 8px + 日号 22px + gap 2px）。
+ * 条带从此偏移开始，不遮挡日号/农历
+ */
+const SPAN_HEADER_OFFSET_PX = 32;
 
 /** dataTransfer.taskId（filePath:lineNumber）→ 任务查找 */
 function findTaskById(tasks: GCTask[], taskId: string): GCTask | null {
@@ -189,10 +194,10 @@ export function MonthView(): JSX.Element {
 						>
 							<span>W{week.weekNumber}</span>
 						</div>
-						{/* 横跨条带 overlay：与 7 个日格同行同区域，pointer-events 穿透到格 */}
+						{/* 横跨条带 overlay：与 7 个日格同行同区域，从日期头部下方开始，pointer-events 穿透到格 */}
 						<div
 							className={MonthViewClasses.elements.spanStrip}
-							style={{ gridRow: `${weekRow}`, gridColumn: '2 / -1', height: `${stripH}px` }}
+							style={{ gridRow: `${weekRow}`, gridColumn: '2 / -1', marginTop: `${SPAN_HEADER_OFFSET_PX}px`, height: `${stripH}px` }}
 						>
 							{(weekModel?.spanBars ?? []).map((bar) => (
 								<div
