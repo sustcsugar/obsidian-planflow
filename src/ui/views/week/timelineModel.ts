@@ -640,3 +640,153 @@ export function buildDayTimelineModel(
 
 	return { blocks: daySegs, allday };
 }
+
+// ===== 月视图时间线模型（跨日横跨条 + 格内任务，与周/日视图同语义） =====
+
+/** 月网格周行的横跨条（跨日区间任务） */
+export interface MonthSpanBar extends LaneInfo {
+	task: GCTask;
+	/** 周行内的起始列（0-6，钳制到本周） */
+	startCol: number;
+	/** 周行内的结束列（0-6，含当日，钳制到本周） */
+	endCol: number;
+	/** 延续自上月（或上月开始的区间截断） */
+	continuesBefore: boolean;
+	/** 延续至下月 */
+	continuesAfter: boolean;
+	/** 长区间任务的起止时刻标注 */
+	timeLabel?: string;
+}
+
+/** 月网格单行（一周）模型 */
+export interface MonthWeekModel {
+	/** 该周的横跨条（已 lane 布局） */
+	spanBars: MonthSpanBar[];
+	/** 横跨条占用行数（决定条带高度） */
+	spanLaneCount: number;
+	/** 格内任务（单日任务/定时任务锚日），key = toISOStringLocal(date) */
+	cells: Map<string, GCTask[]>;
+}
+
+/**
+ * 构建月视图模型，语义与周/日视图对齐：
+ * - 双字段 day 精度区间 / ≥24h 长区间 → 每周横跨条（周内钳制 + 延续标记 + 时刻标注）
+ * - <24h 定时任务（点/区间）→ 锚日格内（前向锚=开始日，后向锚=截止日）
+ * - 单字段 day 精度 → dateField 命中日格内（维持现状）
+ * @param weeks 月网格的周数组（含跨月补齐日），days 为该周 7 天
+ */
+export function buildMonthTimelineModel(
+	tasks: GCTask[],
+	weeks: Array<{ days: Array<{ date: Date }> }>,
+	startField: DateFieldType,
+	endField: DateFieldType,
+	dateField: DateFieldType,
+): MonthWeekModel[] {
+	// 预分类：跨日区间任务与锚日格内任务
+	const spans: Array<{ task: GCTask; startDay: Date; endDay: Date; timeLabel?: string }> = [];
+	const anchored: Array<{ task: GCTask; day: Date }> = [];
+
+	for (const task of tasks) {
+		const interval = getTaskInterval(task, startField, endField, dateField);
+		if (interval) {
+			const durationMin = Math.round((interval.end.getTime() - interval.start.getTime()) / 60000);
+			if (interval.kind === 'interval' && durationMin >= MINUTES_PER_DAY) {
+				spans.push({
+					task,
+					startDay: dayStart(interval.start),
+					endDay: lastCoveredDay(interval.end, interval.start),
+					timeLabel: buildIntervalTimeLabel(
+						interval.start, interval.end,
+						task.datePrecision?.[startField] === 'time',
+						task.datePrecision?.[endField] === 'time',
+					),
+				});
+				continue;
+			}
+			// <24h 定时任务：锚日入格——前向锚=开始日，后向锚（截止语义）=结束日
+			const anchor = interval.pointDirection === 'backward' ? interval.end : interval.start;
+			anchored.push({ task, day: dayStart(anchor) });
+			continue;
+		}
+
+		// 双字段 day 精度区间 → 横跨条
+		const startVal = getTaskDateField(task, startField);
+		const endVal = getTaskDateField(task, endField);
+		if (startVal && endVal) {
+			const s = dayStart(startVal);
+			const e = dayStart(endVal);
+			if (e.getTime() >= s.getTime()) {
+				spans.push({ task, startDay: s, endDay: e });
+				continue;
+			}
+		}
+
+		// 单字段：dateField 命中日
+		const dateVal = getTaskDateField(task, dateField);
+		if (dateVal && !isNaN(dateVal.getTime())) {
+			anchored.push({ task, day: dayStart(dateVal) });
+		}
+	}
+
+	return weeks.map((week) => {
+		const weekStart = dayStart(week.days[0].date);
+		const weekEnd = dayStart(week.days[6].date);
+
+		// 周内格内任务
+		const cells = new Map<string, GCTask[]>();
+		for (const day of week.days) {
+			const key = dayToKey(day.date);
+			cells.set(key, []);
+		}
+		for (const a of anchored) {
+			if (a.day.getTime() >= weekStart.getTime() && a.day.getTime() <= weekEnd.getTime()) {
+				cells.get(dayToKey(a.day))?.push(a.task);
+			}
+		}
+
+		// 周内横跨条：区间与周求交，钳制到列
+		const weekBars: MonthSpanBar[] = [];
+		for (const s of spans) {
+			if (s.endDay.getTime() < weekStart.getTime() || s.startDay.getTime() > weekEnd.getTime()) continue;
+			const startCol = Math.round((Math.max(s.startDay.getTime(), weekStart.getTime()) - weekStart.getTime()) / 86400000);
+			const endCol = Math.round((Math.min(s.endDay.getTime(), weekEnd.getTime()) - weekStart.getTime()) / 86400000);
+			weekBars.push({
+				task: s.task,
+				startCol,
+				endCol,
+				continuesBefore: s.startDay < weekStart,
+				continuesAfter: s.endDay > weekEnd,
+				timeLabel: s.timeLabel,
+				lane: 0, laneCount: 1, stackedIndex: 0,
+			});
+		}
+
+		// lane 布局（纵向堆行，不设上限，与周视图全天行同教训）
+		const laneProxy = weekBars.map((bar) => ({
+			bar,
+			startMin: bar.startCol * MINUTES_PER_DAY,
+			endMin: (bar.endCol + 1) * MINUTES_PER_DAY,
+			lane: 0, laneCount: 1, stackedIndex: 0,
+		}));
+		assignLanes(laneProxy, Infinity);
+		for (const p of laneProxy) {
+			p.bar.lane = p.lane;
+			p.bar.laneCount = p.laneCount;
+			p.bar.stackedIndex = p.stackedIndex;
+		}
+
+		return {
+			spanBars: weekBars,
+			spanLaneCount: weekBars.reduce((max, b) => Math.max(max, b.lane + 1), 0),
+			cells,
+		};
+	});
+}
+
+/** Date → 本地日期 key（YYYY-MM-DD，与组件层 toISOStringLocal 一致的天粒度） */
+function dayToKey(d: Date): string {
+	const y = d.getFullYear();
+	const m = String(d.getMonth() + 1).padStart(2, '0');
+	const day = String(d.getDate()).padStart(2, '0');
+	return `${y}-${m}-${day}`;
+}
