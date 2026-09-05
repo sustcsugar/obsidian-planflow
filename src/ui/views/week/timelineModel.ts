@@ -349,7 +349,7 @@ export interface WeekTimelineModel {
 }
 
 /** 区间任务的时刻标注：两端带时刻 "09:00 → 18:00"，单端 "22:00 →" / "→ 03:00"，纯日期无标注 */
-function buildIntervalTimeLabel(start: Date, end: Date, startTimed: boolean, endTimed: boolean): string | undefined {
+export function buildIntervalTimeLabel(start: Date, end: Date, startTimed: boolean, endTimed: boolean): string | undefined {
 	if (!startTimed && !endTimed) return undefined;
 	const parts: string[] = [];
 	if (startTimed) parts.push(formatMinutes(start.getHours() * 60 + start.getMinutes()));

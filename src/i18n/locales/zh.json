@@ -1305,7 +1305,9 @@
         "五",
         "六"
       ],
-      "allDay": "全天"
+      "allDay": "全天",
+      "alldayMore": "还有 {{count}} 个全天任务…",
+      "alldayCollapse": "收起全天任务"
     },
     "dayView": {
       "todayTasks": "当日任务",
@@ -1394,7 +1396,9 @@
         "周六"
       ],
       "noTasks": "今天没有任务",
-      "allDay": "全天"
+      "allDay": "全天",
+      "alldayMore": "还有 {{count}} 个全天任务…",
+      "alldayCollapse": "收起全天任务"
     }
   },
   "taskStatus": {

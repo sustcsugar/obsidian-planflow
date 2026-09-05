@@ -4,21 +4,20 @@ import { Platform } from 'obsidian';
 /**
  * 平台/输入方式探测（移动端适配的统一入口）
  *
- * - isPhone：Obsidian Platform.isPhone，辅以宽度断点兜底（平板横屏/窄桌面窗）
- * - isTouch：主输入为粗指针（无 hover）——触屏交互分支与 CSS `@media (hover: none)` 对齐
- *
- * React 侧用 hook（订阅 matchMedia 变化，旋屏/分屏实时生效）；
- * 非 React 场景用同步函数（只读当前值）
+ * 双信号原则（桌面窄窗口拍板，2026-09-05）：
+ * - isPhone：仅认设备 Platform.isPhone —— 视图形态类判定
+ *   （周视图 3 日窗/日视图竖屏/月视图色点/甘特列宽），桌面窄窗口不改变信息结构
+ * - isNarrow：宽度断点（≤520px）—— 空间适配类判定
+ *   （工具栏 ⋯ 收纳等纯布局收缩），窄桌面窗口同样受益
+ * - isTouch：主输入为粗指针（无 hover）—— 触屏交互分支与 CSS `@media (hover: none)` 对齐
  */
 
 const PHONE_WIDTH_QUERY = '(max-width: 520px)';
 const TOUCH_QUERY = '(hover: none), (pointer: coarse)';
 
-/** 当前是否为手机形态（同步读取，非响应式） */
+/** 当前是否为手机形态：仅认设备（Platform.isPhone），桌面窄窗口不算 */
 export function isPhoneNow(): boolean {
-	if (Platform.isPhone) return true;
-	if (Platform.isTablet) return false;
-	return window.matchMedia(PHONE_WIDTH_QUERY).matches;
+	return Platform.isPhone;
 }
 
 /** 当前主输入是否为触屏（同步读取，非响应式） */
@@ -26,26 +25,19 @@ export function isTouchNow(): boolean {
 	return window.matchMedia(TOUCH_QUERY).matches;
 }
 
-/** 手机形态（响应式 hook） */
+/** 手机形态（设备级常量语义；保留 hook 形态兼容既有调用点） */
 export function useIsPhone(): boolean {
-	const [isPhone, setIsPhone] = useState(isPhoneNow);
-	useEffect(() => {
-		const mql = window.matchMedia(PHONE_WIDTH_QUERY);
-		const onChange = () => setIsPhone(isPhoneNow());
-		mql.addEventListener('change', onChange);
-		return () => mql.removeEventListener('change', onChange);
-	}, []);
-	return isPhone;
+	return isPhoneNow();
 }
 
-/** 触屏主输入（响应式 hook） */
-export function useIsTouch(): boolean {
-	const [isTouch, setIsTouch] = useState(isTouchNow);
+/** 窄窗口（宽度断点响应式 hook）：空间适配类判定专用，不改变视图信息结构 */
+export function useIsNarrow(): boolean {
+	const [isNarrow, setIsNarrow] = useState(() => window.matchMedia(PHONE_WIDTH_QUERY).matches);
 	useEffect(() => {
-		const mql = window.matchMedia(TOUCH_QUERY);
-		const onChange = () => setIsTouch(isTouchNow());
+		const mql = window.matchMedia(PHONE_WIDTH_QUERY);
+		const onChange = () => setIsNarrow(mql.matches);
 		mql.addEventListener('change', onChange);
 		return () => mql.removeEventListener('change', onChange);
 	}, []);
-	return isTouch;
+	return isNarrow;
 }

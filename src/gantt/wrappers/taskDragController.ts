@@ -32,7 +32,8 @@ function updateTaskBarVisual(
 	dragState: TaskDragState,
 ): void {
 	if (!dragState.task) return;
-	const HANDLE_HIT_AREA = 12;
+	// 触屏（粗指针）命中区放大，与渲染器创建侧保持一致
+	const HANDLE_HIT_AREA = window.matchMedia('(hover: none), (pointer: coarse)').matches ? 22 : 12;
 	const HANDLE_VISUAL_SIZE = 4;
 
 	const startUnitIndex = findStartGridUnitIndex(newStart, minDate, { columnWidth: ctx.columnWidth, granularity: ctx.granularity });

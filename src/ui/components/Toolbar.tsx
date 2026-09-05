@@ -14,7 +14,7 @@ import { Icon } from './Icon';
 import { TagTreeFilter } from './TagTreeFilter';
 import { DropdownMenu, type MenuItemDef, type DropdownMenuSection } from './DropdownMenu';
 import type { DateFieldType, GanttCalendarSettings } from '../../settings/types';
-import { useIsPhone } from '../utils/platform';
+import { useIsNarrow } from '../utils/platform';
 
 const VIEW_BUTTONS: Array<{ type: CalendarViewType; icon: string }> = [
 	{ type: 'day', icon: 'sun' },
@@ -226,7 +226,8 @@ export function ToolbarBar(): JSX.Element {
 	const isCalendar = viewType === 'year' || viewType === 'month' || viewType === 'week' || viewType === 'day';
 	const showStatusSort = viewType === 'month' || viewType === 'week' || viewType === 'day';
 	const requestGanttScroll = useCalendarStore((s) => s.requestGanttScroll);
-	const isPhone = useIsPhone();
+	// 空间适配：窄窗口即收纳（桌面窄分栏同样受益），非视图形态判定
+	const isPhone = useIsNarrow();
 
 	return (
 		<div className={ToolbarClasses.block}>

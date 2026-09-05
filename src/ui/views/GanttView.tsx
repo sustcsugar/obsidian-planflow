@@ -19,7 +19,7 @@ import { useCalendarStore, selectViewFilter } from '../store/calendarStore';
 
 const GANTT_CONFIG: Omit<GanttChartConfig, 'on_click' | 'on_date_change' | 'on_progress_change'> = {
 	view_mode: 'week',
-	granularity: TimeGranularity.WEEK,
+	granularity: TimeGranularity.DAY,
 	language: isChineseLanguage() ? 'zh' : 'en',
 	header_height: 50,
 	column_width: 40,

@@ -37,6 +37,9 @@ import { useCanvasTouchDrag } from './useCanvasTouchDrag';
 /** 全天行单行高度（卡片 24px + 间距 4px，与 CSS 令牌对应） */
 const ALLDAY_ROW_PX = 28;
 
+/** 折叠态全天行可见的横跨条行数，超出收进 "+N" 折叠行 */
+const ALLDAY_COLLAPSED_LANES = 3;
+
 /**
  * 创建手势的像素位移阈值：超过该位移才视为拖拽选区。
  * 不能用吸附步长判断——点击时 1-2px 抖动就可能让吸附分钟跨过舍入中点跳一格，
@@ -343,10 +346,20 @@ export function WeekTimelineGrid({
 		return () => window.clearInterval(timer);
 	}, [hasToday, updateSeq, weekStart, model]);
 
-	// ===== 全天行高度（lane 数） =====
-	const alldayLaneCount = useMemo(() => (
+	// ===== 全天行：lane 布局不设上限，渲染折叠（极端重叠不挤压时间网格） =====
+	const totalAlldayLanes = useMemo(() => (
 		model.allday.reduce((max, bar) => Math.max(max, bar.lane + 1), 1)
 	), [model.allday]);
+	const [alldayExpanded, setAlldayExpanded] = useState(false);
+	// 切周后回到折叠态
+	useEffect(() => { setAlldayExpanded(false); }, [weekStart]);
+
+	/** 折叠态可见的横跨条行数；其余收进"+N"折叠行 */
+	const visibleBarLanes = alldayExpanded ? totalAlldayLanes : Math.min(totalAlldayLanes, ALLDAY_COLLAPSED_LANES);
+	const hiddenAlldayCount = alldayExpanded ? 0 : model.allday.filter((b) => b.lane >= ALLDAY_COLLAPSED_LANES).length;
+	/** 折叠行本身占一行（展开态的"收起"行同理） */
+	const alldayChipRow = alldayExpanded ? totalAlldayLanes : visibleBarLanes;
+	const alldayRowHeight = (hiddenAlldayCount > 0 || alldayExpanded ? alldayChipRow + 1 : visibleBarLanes) * ALLDAY_ROW_PX;
 
 	// ===== 全天行拖放 =====
 	const handleAlldayDragOver = useCallback((e: ReactDragEvent) => {
@@ -415,7 +428,7 @@ export function WeekTimelineGrid({
 			</div>
 			<div
 				className={WeekViewClasses.elements.alldayRow}
-				style={{ gridColumn: '2 / -1', gridRow: '2', height: `${alldayLaneCount * ALLDAY_ROW_PX}px` }}
+				style={{ gridColumn: '2 / -1', gridRow: '2', height: `${alldayRowHeight}px` }}
 				onDragOver={handleAlldayDragOver}
 				onDragLeave={handleAlldayDragLeave}
 				onDrop={handleAlldayDrop}
@@ -431,6 +444,7 @@ export function WeekTimelineGrid({
 					);
 				})}
 				{model.allday.map((bar) => {
+					if (!alldayExpanded && bar.lane >= ALLDAY_COLLAPSED_LANES) return null;
 					// 横跨条钳制到可见窗口（窗口外部分截断，延续箭头仍指示）
 					const clampedStart = Math.max(bar.startDayIndex, visibleIdxs[0]);
 					const clampedEnd = Math.min(bar.endDayIndex, visibleIdxs[colCount - 1]);
@@ -457,13 +471,33 @@ export function WeekTimelineGrid({
 							{/* 长区间任务的起止时刻标注（如 "22:00 → 03:00"） */}
 							{bar.timeLabel ? (
 								<span className={WeekViewClasses.elements.alldayBarTime}>{bar.timeLabel}</span>
-							) : null}
-						</div>
-					);
-				})}
-			</div>
+						) : null}
+					</div>
+				);
+			})}
+			{/* 折叠/收起行：极端重叠时全天行不超过 3 行横跨条 + 本行 */}
+			{(hiddenAlldayCount > 0 || alldayExpanded) ? (
+				<div
+					className={WeekViewClasses.elements.alldayMore}
+					style={{ top: `${alldayChipRow * ALLDAY_ROW_PX}px` }}
+					role="button"
+					tabIndex={0}
+					onClick={() => setAlldayExpanded((v) => !v)}
+					onKeyDown={(e) => {
+						if (e.key === 'Enter' || e.key === ' ') {
+							e.preventDefault();
+							setAlldayExpanded((v) => !v);
+						}
+					}}
+				>
+					{alldayExpanded
+						? i18n.t('views.weekView.alldayCollapse')
+						: i18n.t('views.weekView.alldayMore', { count: hiddenAlldayCount })}
+				</div>
+			) : null}
+		</div>
 
-			{/* 时间沟槽：24 个整点标签 */}
+		{/* 时间沟槽：24 个整点标签 */}
 			<div className={WeekViewClasses.elements.timeGutterSlot} style={{ gridColumn: '1', gridRow: '3' }}>
 				{Array.from({ length: 24 }, (_, hour) => (
 					<div key={`week-g-${hour}`} className={WeekViewClasses.elements.timeGutterLabel}>

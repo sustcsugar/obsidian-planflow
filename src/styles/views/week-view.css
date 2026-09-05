@@ -571,3 +571,27 @@
 .gc-week-view__time-block .gc-task-card--timeline .gc-task-card__tags {
 	max-width: 100%;
 }
+
+/* 全天行折叠/收起行（极端重叠时收进 "+N"） */
+.gc-week-view__allday-more {
+	position: absolute;
+	left: 2px;
+	right: 2px;
+	height: var(--gc-tl-card-h);
+	display: flex;
+	align-items: center;
+	padding: 0 8px;
+	font-size: 11px;
+	color: var(--text-muted);
+	background-color: var(--background-primary-alt);
+	border: 1px dashed var(--background-modifier-border);
+	border-radius: var(--gc-radius-xs, 4px);
+	cursor: pointer;
+	user-select: none;
+	transition: background-color var(--gc-dur-fast) var(--gc-ease-out);
+}
+
+.gc-week-view__allday-more:hover {
+	background-color: var(--background-modifier-hover);
+	color: var(--text-normal);
+}

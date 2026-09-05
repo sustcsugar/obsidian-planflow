@@ -420,6 +420,7 @@ export const GanttClasses = {
 		stickyHeader: bem(BLOCKS.GANTT, 'sticky-header'),
 		leadBar: bem(BLOCKS.GANTT, 'lead-bar'),
 		handleLeft: bem(BLOCKS.GANTT, 'handle-left'),
+		barTime: bem(BLOCKS.GANTT, 'bar-time'),
 		handleRight: bem(BLOCKS.GANTT, 'handle-right'),
 		emptyState: 'gantt-empty-state',
 		emptyIcon: 'gantt-empty-icon',
@@ -819,6 +820,7 @@ export const WeekViewClasses = {
 		alldayCell: bem(BLOCKS.WEEK_VIEW, 'allday-cell'),
 		alldayBar: bem(BLOCKS.WEEK_VIEW, 'allday-bar'),
 		alldayBarTime: bem(BLOCKS.WEEK_VIEW, 'allday-bar-time'),
+		alldayMore: bem(BLOCKS.WEEK_VIEW, 'allday-more'),
 		currentTimeLine: bem(BLOCKS.WEEK_VIEW, 'timeline-current-time'),
 	},
 
