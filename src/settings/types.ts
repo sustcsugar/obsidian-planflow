@@ -66,6 +66,11 @@ export interface GanttCalendarSettings {
 	dayViewSelectedStatuses: string[];
 	dayViewSelectedTags: string[];
 	dayViewTagOperator: TagFilterOperator;
+	// DayView 卡片显示控制（与其他时间线视图对齐）
+	dayViewShowCheckbox: boolean;
+	dayViewShowTags: boolean;
+	dayViewShowPriority: boolean;
+	dayViewShowTicktick: boolean;
 
 	// WeekView 状态
 	weekViewSortField: SortField;

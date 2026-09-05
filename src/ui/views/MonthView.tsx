@@ -59,15 +59,15 @@ export function MonthView(): JSX.Element {
 	const endField = plugin.settings.ganttEndField || 'dueDate';
 	const enabledFormats = plugin.settings.enabledTaskFormats || [];
 
+	// 月视图统一使用 timeline 变体：格内卡片与横跨条同一视觉语言
 	const config = useMemo(() => ({
 		...MonthViewConfig,
+		variant: 'timeline' as const,
 		showCheckbox: plugin.settings.monthViewShowCheckbox,
 		showTags: plugin.settings.monthViewShowTags,
 		showPriority: plugin.settings.monthViewShowPriority,
 		showTicktick: plugin.settings.monthViewShowTicktick,
 	}), [plugin.settings]);
-	// 横跨条内使用紧凑 timeline 变体
-	const spanConfig = useMemo(() => ({ ...config, variant: 'timeline' as const }), [config]);
 
 	const monthData = useMemo(() => {
 		return generateMonthCalendar(currentDate.getFullYear(), currentDate.getMonth() + 1, startOnMonday);
@@ -212,7 +212,7 @@ export function MonthView(): JSX.Element {
 								>
 									<TaskCard
 										task={bar.task}
-										config={spanConfig}
+										config={config}
 										targetDate={week.days[bar.startCol]?.date}
 										onRefresh={handleCardRefresh}
 									/>

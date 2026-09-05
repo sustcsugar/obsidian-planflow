@@ -56,11 +56,13 @@ export function DayView(): JSX.Element {
 	const timelineConfig = useMemo(() => ({
 		...DayViewConfig,
 		enableDrag: true,
-		// 画布块信息密度高且可能被裁剪，悬浮详情弹窗与周视图/侧栏保持一致开启
-		// （DayViewConfig 预设的 false 是旧版简化列表的遗留）
 		enableTooltip: true,
+		showCheckbox: plugin.settings.dayViewShowCheckbox ?? true,
+		showTags: plugin.settings.dayViewShowTags ?? true,
+		showPriority: plugin.settings.dayViewShowPriority ?? true,
+		showTicktick: plugin.settings.dayViewShowTicktick ?? true,
 		variant: 'timeline' as const,
-	}), []);
+	}), [plugin.settings]);
 
 	const normalized = useMemo(() => {
 		const d = new Date(currentDate);
@@ -203,31 +205,29 @@ export function DayView(): JSX.Element {
 		}
 	}, [editorMode]);
 
-	// ===== 任务区渲染：全天区 + 共享连续画布 =====
+	// ===== 任务区渲染：全天区（始终渲染为拖放目标，与侧栏统一） + 共享连续画布 =====
 	const renderTaskList = (): JSX.Element => (
 		<>
-			{(model.allday.length > 0) ? (
-				<div className={DayViewClasses.elements.alldaySection} {...allDayDropProps}>
-					<div className={DayViewClasses.elements.alldayLabel}>
-						{i18n.t('views.weekView.allDay')}
-					</div>
-					<div className={DayViewClasses.elements.alldayTasks}>
-						{model.allday.map(({ task, timeLabel }) => (
-							<div key={`${task.filePath}:${task.lineNumber}`} className={DayViewClasses.elements.alldayItem}>
-								<TaskCard
-									task={task}
-									config={timelineConfig}
-									targetDate={normalized}
-									onRefresh={handleCardRefresh}
-								/>
-								{timeLabel ? (
-									<span className={DayViewClasses.elements.alldayTime}>{timeLabel}</span>
-								) : null}
-							</div>
-						))}
-					</div>
+			<div className={DayViewClasses.elements.alldaySection} {...allDayDropProps}>
+				<div className={DayViewClasses.elements.alldayLabel}>
+					{i18n.t('views.weekView.allDay')}
 				</div>
-			) : null}
+				<div className={DayViewClasses.elements.alldayTasks}>
+					{model.allday.map(({ task, timeLabel }) => (
+						<div key={`${task.filePath}:${task.lineNumber}`} className={DayViewClasses.elements.alldayItem}>
+							<TaskCard
+								task={task}
+								config={timelineConfig}
+								targetDate={normalized}
+								onRefresh={handleCardRefresh}
+							/>
+							{timeLabel ? (
+								<span className={DayViewClasses.elements.alldayTime}>{timeLabel}</span>
+							) : null}
+						</div>
+					))}
+				</div>
+			</div>
 			{model.blocks.length === 0 && model.allday.length === 0 ? (
 				<div className="gantt-task-empty">{i18n.t('common.noTasks')}</div>
 			) : null}

@@ -144,13 +144,10 @@
 	overflow: hidden;
 }
 
-/* 任务药丸：月视图内瘦身，保留 3px 状态色条 */
-.gc-month-view__tasks .gc-task-card {
-	padding: 3px 8px;
-	min-height: 0;
-	font-size: 12px;
-	line-height: 1.5;
-	gap: 4px;
+/* 格内任务药丸：timeline 变体在月视图的适配（单行紧凑） */
+.gc-month-view__tasks .gc-task-card--timeline {
+	min-height: 18px;
+	font-size: 11px;
 }
 
 /* "更多"提示 chip */
@@ -209,21 +206,17 @@ body.gc-is-phone .gc-month-view__task-more {
 	margin: 0 1px;
 }
 
+/* 横跨条：容器透明无装饰（与周视图统一），视觉完全靠内部 TaskCard */
 .gc-month-view__span-bar {
 	position: absolute;
 	height: 18px;
 	min-width: 0;
-	border-radius: 4px;
 	overflow: hidden;
 	pointer-events: auto;
-	background-color: var(--background-primary-alt);
-	border-left: 2px solid var(--interactive-accent);
 }
 
 .gc-month-view__span-bar .gc-task-card--timeline {
 	height: 100%;
-	padding: 0 4px;
-	font-size: 10px;
 }
 
 .gc-month-view__span-bar--continues-before {

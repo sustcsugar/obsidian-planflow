@@ -13,4 +13,4 @@ export { TaskViewConfig } from './presets/TaskView.config';
 export { DayViewConfig } from './presets/DayView.config';
 export { WeekViewConfig } from './presets/WeekView.config';
 export { MonthViewConfig } from './presets/MonthView.config';
-export { SidebarViewConfig, buildSidebarConfig } from './presets/SidebarView.config';
+export { buildSidebarConfig } from './presets/SidebarView.config';

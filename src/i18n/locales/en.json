@@ -429,6 +429,7 @@
         "extraContent": "Extra Content"
       },
       "views": {
+        "day": "Day View",
         "week": "Week View",
         "month": "Month View",
         "sidebar": "Sidebar"

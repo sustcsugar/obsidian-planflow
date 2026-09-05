@@ -429,6 +429,7 @@
         "extraContent": "附加内容"
       },
       "views": {
+        "day": "日视图",
         "week": "周视图",
         "month": "月视图",
         "sidebar": "侧边栏"

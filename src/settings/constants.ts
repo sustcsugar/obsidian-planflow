@@ -60,6 +60,10 @@ export const DEFAULT_SETTINGS: GanttCalendarSettings = {
 	dayViewSelectedStatuses: ['todo'],
 	dayViewSelectedTags: [],
 	dayViewTagOperator: 'OR',
+	dayViewShowCheckbox: true,
+	dayViewShowTags: true,
+	dayViewShowPriority: true,
+	dayViewShowTicktick: true,
 
 	// WeekView
 	weekViewSortField: 'priority',
