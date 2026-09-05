@@ -731,7 +731,6 @@ export class MarkdownDataSource implements IDataSource {
 
 		// 检测更新：ID 交集且指纹变化（无指纹缓存时退化为全量 updated，
 		// 与旧行为一致，保证正确性优先）
-		const unmatchedOldIds: string[] = [];
 		for (const [id, newTask] of newIdMap) {
 			if (oldIdSet.has(id)) {
 				const oldFp = oldFingerprintMap?.get(id);

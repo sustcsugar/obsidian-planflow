@@ -30,15 +30,36 @@ type ConstructableWorkspaceSplit = new (ws: App['workspace'], dir: 'horizontal' 
 /**
  * 临时屏蔽 setActiveLeaf 的工具函数
  * Obsidian 1.8.7+ 在 createLeafInParent 时会激活新 leaf，需要阻止
+ * 内部 API 已弃用，未来版本移除后此处自动降级为 no-op（不再导致 TypeError）
  */
 function suppressSetActiveLeaf(app: App): () => void {
-    // 通过类型擦除访问已弃用的 setActiveLeaf (Obsidian 1.8.7+ 行为规避)
-    const ws = app.workspace as unknown as Record<string, (...args: unknown[]) => void>;
-    const original = ws.setActiveLeaf.bind(app.workspace); // eslint-disable-line @typescript-eslint/no-unsafe-assignment -- Obsidian internal API returns any
+    const ws = app.workspace as unknown as Record<string, unknown>;
+    if (typeof ws.setActiveLeaf !== 'function') {
+        return () => {}; // API 已移除：无需屏蔽，直接透传
+    }
+    const original = ws.setActiveLeaf as (...args: unknown[]) => void;
     ws.setActiveLeaf = () => {};
     return () => {
-        ws.setActiveLeaf = original; // eslint-disable-line @typescript-eslint/no-unsafe-assignment -- Obsidian internal API returns any
+        ws.setActiveLeaf = original;
     };
+}
+
+/**
+ * 能力检测：WorkspaceSplit 构造器与 createLeafInParent 是否可用。
+ * 本编辑器依赖 Obsidian 内部结构（参照 Hover Editor），未来版本可能破坏；
+ * 检测失败时调用方应走 fallbackToPreview 只读降级路径
+ */
+function isEmbeddedEditorSupported(app: App): boolean {
+    try {
+        const ws = app.workspace as unknown as Record<string, unknown>;
+        return (
+            typeof WorkspaceSplit === 'function' &&
+            typeof ws.createLeafInParent === 'function' &&
+            !!ws.rootSplit
+        );
+    } catch {
+        return false;
+    }
 }
 
 /**
@@ -87,8 +108,8 @@ export class EmbeddedNoteEditor {
      * 打开指定文件的编辑器
      */
     async openFile(file: TFile, parentComponent: Component): Promise<void> {
-        // 移动端：WorkspaceSplit/setActiveLeaf 内部 hack 风险高，直接走只读预览降级路径
-        if (Platform.isMobile) {
+        // 移动端 / 内部 API 不可用：WorkspaceSplit/setActiveLeaf hack 风险高，直接走只读预览降级路径
+        if (Platform.isMobile || !isEmbeddedEditorSupported(this.app)) {
             this.currentFilePath = file.path;
             await this.fallbackToPreview(file, parentComponent);
             return;

@@ -1,4 +1,4 @@
-import { Setting, SettingGroup } from 'obsidian';
+import { Setting } from 'obsidian';
 import { BaseBuilder } from './BaseBuilder';
 import { SettingsCardChipClasses } from '../../utils/bem';
 import type { BuilderConfig, GanttCalendarSettings } from '../types';

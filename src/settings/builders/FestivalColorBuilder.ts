@@ -1,4 +1,4 @@
-import { Setting, SettingGroup } from 'obsidian';
+import { Setting } from 'obsidian';
 import { BaseBuilder } from './BaseBuilder';
 import { MacaronColorPicker } from '../components';
 import { PRESET_FESTIVAL_COLORS } from '../constants';

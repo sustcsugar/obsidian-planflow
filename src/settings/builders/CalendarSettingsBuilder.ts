@@ -1,4 +1,4 @@
-import { Setting, SettingGroup } from 'obsidian';
+import { Setting } from 'obsidian';
 import { SettingsClasses } from '../../utils/bem';
 import { BaseBuilder } from './BaseBuilder';
 import { FolderSuggest, FileSuggest } from '../components';

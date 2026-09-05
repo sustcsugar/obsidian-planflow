@@ -53,7 +53,6 @@ export function DayView(): JSX.Element {
 	const startField = plugin.settings.ganttStartField || 'startDate';
 	const endField = plugin.settings.ganttEndField || 'dueDate';
 
-	const config = useMemo(() => ({ ...DayViewConfig }), []);
 	const timelineConfig = useMemo(() => ({
 		...DayViewConfig,
 		enableDrag: true,

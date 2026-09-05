@@ -167,17 +167,17 @@ export default class GanttCalendarPlugin extends Plugin {
 	}
 
 	private formatLastSync(): string {
-		if (!this.lastSyncTime) return '\u2014 \u672A\u540C\u6B65';
+		const pad = (n: number) => String(n).padStart(2, '0');
+		if (!this.lastSyncTime) return `— ${i18n.t('common.notSynced')}`;
 		const d = new Date(this.lastSyncTime);
 		const now = new Date();
-		const pad = (n: number) => String(n).padStart(2, '0');
 		const hhmm = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
-		if (d.toDateString() === now.toDateString()) return `\u540C\u6B65 ${hhmm}`;
+		if (d.toDateString() === now.toDateString()) return i18n.t('common.syncedAt', { time: hhmm });
 
 		const yesterday = new Date(now);
 		yesterday.setDate(yesterday.getDate() - 1);
-		if (d.toDateString() === yesterday.toDateString()) return `\u6628\u65E5 ${hhmm}`;
+		if (d.toDateString() === yesterday.toDateString()) return i18n.t('common.syncedYesterdayAt', { time: hhmm });
 
 		return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${hhmm}`;
 	}

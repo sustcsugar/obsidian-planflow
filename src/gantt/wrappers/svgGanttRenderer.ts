@@ -14,7 +14,7 @@
 
 import type { GanttChartTask, GanttChartConfig, DateFieldType } from '../types';
 import { TimeGranularity, GRANULARITY_CONFIGS } from '../types';
-import { parseLocalDate, findStartGridUnitIndex as findStartIdx, findEndGridUnitIndex as findEndIdx, getGridUnitX as getX, getDateForUnit as getUnit, isSameUnit as sameUnit, isMajorGridLine as majorLine } from './dateGeometry';
+import { parseLocalDate, findStartGridUnitIndex as findStartIdx, findEndGridUnitIndex as findEndIdx, getGridUnitX as getX, getDateForUnit as getUnit } from './dateGeometry';
 import { createTaskDragController } from './taskDragController';
 import { renderHeader } from './headerRenderer';
 import { renderCorner } from './cornerRenderer';
@@ -26,7 +26,6 @@ import { Logger } from '../../utils/logger';
 import { LinkRenderer } from '../../utils/linkRenderer';
 import { getTodayInTimezone } from '../../dateUtils/timezone';
 import { formatDate } from '../../dateUtils/dateUtilsIndex';
-import { i18n } from '../../i18n/i18n';
 import { openFileInExistingLeaf } from '../../utils/fileOpener';
 import { App } from 'obsidian';
 
@@ -330,7 +329,7 @@ export class SvgGanttRenderer {
 			this as unknown as import('./renderContext').IRenderContext,
 			() => this.tasks,
 			this.onDateChange,
-			this.handleTaskClick.bind(this),
+			(task: GanttChartTask) => this.handleTaskClick(task),
 		);
 
 		this.renderGanttChart(this.ganttSvg, minDate, totalUnits, ganttHeight, granularity);

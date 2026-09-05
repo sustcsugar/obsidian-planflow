@@ -324,8 +324,6 @@ export class SyncSettingsBuilder extends BaseBuilder {
 	// ==================== Feishu Account Settings ====================
 
 	private renderFeishuSettings(group: SettingGroup, syncConfig: SyncConfiguration): void {
-		const container = this.containerEl;
-
 		const addSetting = (cb: (setting: Setting) => void) => {
 			group.addSetting(cb);
 		};

@@ -27,7 +27,6 @@ import { setTaskStatus } from '../../contextMenu/commands/setTaskStatus';
 import { setTaskPriority } from '../../contextMenu/commands/setPriority';
 import { i18n } from '../../i18n/i18n';
 import { Logger } from '../../utils/logger';
-import { useCalendarStore } from '../store/calendarStore';
 
 export interface ReactTaskCardProps {
 	task: GCTask;

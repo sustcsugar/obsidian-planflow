@@ -14,8 +14,6 @@ import { Icon } from './Icon';
 import { TagTreeFilter } from './TagTreeFilter';
 import { DropdownMenu, type MenuItemDef, type DropdownMenuSection } from './DropdownMenu';
 import type { DateFieldType, GanttCalendarSettings } from '../../settings/types';
-import { buildTagHierarchy } from '../../tasks/tags/TagHierarchyBuilder';
-import type { TagNode } from '../../tasks/tags/TagHierarchy';
 import { useIsPhone } from '../utils/platform';
 
 const VIEW_BUTTONS: Array<{ type: CalendarViewType; icon: string }> = [

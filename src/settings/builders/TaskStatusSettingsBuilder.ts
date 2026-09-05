@@ -1,4 +1,4 @@
-import { Setting, SettingGroup } from 'obsidian';
+import { Setting } from 'obsidian';
 import { BaseBuilder } from './BaseBuilder';
 import { TaskStatusCard } from '../components';
 import { AddCustomStatusModal, EditCustomStatusModal } from '../modals';
@@ -14,8 +14,7 @@ export class TaskStatusSettingsBuilder extends BaseBuilder {
 
 	render(): void {
 		this.createSettingGroup(i18n.t('settings.taskStatus.groupTitle'), (group) => {
-			const container = group instanceof HTMLElement ? group : this.containerEl;
-			const addSetting = (cb: (setting: Setting) => void) => {
+						const addSetting = (cb: (setting: Setting) => void) => {
 				group.addSetting(cb);
 			};
 
