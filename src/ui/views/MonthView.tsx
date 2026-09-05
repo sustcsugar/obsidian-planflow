@@ -4,7 +4,6 @@ import type { DragEvent as ReactDragEvent } from 'react';
 import { Notice } from 'obsidian';
 import { generateMonthCalendar } from '../../calendar/calendarGenerator';
 import type { GCTask } from '../../types';
-import { getTaskDateField } from '../../types';
 import { MonthViewConfig } from '../../components/TaskCard';
 import { MonthViewClasses, setCssProps } from '../../utils/bem';
 import { usePlugin, useApp } from '../pluginContext';
