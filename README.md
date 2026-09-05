@@ -14,7 +14,9 @@ A powerful visual task management plugin for Obsidian.
 
 **Smart Task Management** — Global filter, priority tags, 6 date fields, time precision (HH:mm), smart write-back with line drift protection
 
-**Timeline View** — Day/Week views with 24-hour timeline layout, drag & drop, quick create
+**Timeline Canvas** — Continuous minute-positioned timeline in Week/Day/Sidebar views: click-to-create, edge resize (15-min snap), WYSIWYG drag with landing preview
+
+**Mobile Ready** — Long-press menus as bottom sheets, touch drag, swipe paging, responsive layouts
 
 **Daily Note Integration** — Embedded editor with edit/preview mode toggle
 
@@ -163,22 +165,26 @@ The plugin uses a **toolbar + content area** layout:
 
 ### Week View
 
-- **Dual Mode Layout**
-  - **List Mode** — When no timed tasks exist, displays 7-column card layout
-  - **Timeline Mode** — When timed tasks are detected, shows 24-hour vertical time grid with 7 days side by side
-- **Today Highlight** — Current day is visually emphasized
-- **Navigation** — Previous week / This week / Next week
-- **Drag & Drop** — Drag tasks to any day or hour slot
-- **Quick Create** — Hover over empty time slots to reveal "+" button for fast task creation
-- **Current Time Indicator** — Red line marking the current time
+- **Continuous Time Canvas** — Always-on 24-hour timeline (no more list/timeline mode switching); task blocks positioned by the minute (1h = 50px), hour + half-hour grid lines
+- **Smart Task Blocks** — Blocks sized by actual duration:
+  - Single-time tasks render as 1-hour point blocks anchored by field role (start-field → forward `[t, t+60)`, due-field → backward `[t-60, t)`)
+  - Same-day intervals render at true size; overnight intervals (<24h) span columns with continuation arrows
+  - Multi-day tasks (≥24h) move to the all-day row as spanning bars with time annotations (`"22:00 → 18:00"`)
+  - Text wraps to multiple lines within block bounds (block is master, text is servant)
+- **All-Day Row** — Date-only tasks + ≥24h spanning bars, unlimited lane rows with `+N` collapse beyond 3
+- **Click-to-Create** — Click any empty canvas spot to create a task at that time (15-min snap); drag vertically to pre-select a range
+- **Edge Resize** — Drag block top/bottom edges to adjust start/end (15-min snap, Alt = 5-min fine-tune); resizing a point task upgrades it to an interval
+- **WYSIWYG Drag & Drop** — Landing anchored to block edges (not cursor) with drop preview; dropping a point task writes both start & end
+- **Overlap Lanes** — Up to 3 side-by-side columns; 4th+ stacks with shadow
+- **Mobile** — 3-day sliding window with horizontal swipe
+- **Today Highlight** — Current day emphasized; current time indicator line
 - **Lunar Info** — Lunar dates and festivals in day headers
 
 ### Day View
 
-- **Task List** — Detailed view of all tasks for the selected day
-- **Timeline Layout** — When timed tasks exist, renders 0:00–23:00 time grid with tasks positioned at their hours
-- **Drag & Drop** — Drag tasks to any hour slot to adjust time
-- **Quick Create** — Hover over empty slots for "+" quick-create button
+- **Continuous Time Canvas** — Same timeline semantics as Week View (minute-positioned blocks, edge resize, click-to-create, drop preview, multi-line text)
+- **All-Day Section** — Date-only tasks + ≥24h spanning bars with time annotations; drop here to convert to all-day
+- **Drag & Drop** — Block-edge-anchored with landing preview; point tasks upgrade to intervals on drop
 - **Current Time Indicator** — Red line at the current time
 - **Daily Note Integration**
   - Embedded full editor (WorkspaceSplit mode)
@@ -209,6 +215,7 @@ The plugin uses a **toolbar + content area** layout:
 - **Incremental Refresh** — Fingerprint-based diff (O(1) events) + immediate drag-write-back (no delay)
 - **Tag & Status Filtering** — Filter gantt bars by tags and status
 - **Configurable Fields** — Choose which date fields map to gantt start/end
+- **Time-Aligned** — Day-granularity grid aligned with calendar view semantics; touch-friendly handles (22px hit area); bar-end time annotations
 
 ### Sidebar View
 
