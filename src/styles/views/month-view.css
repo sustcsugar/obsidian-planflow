@@ -1,9 +1,8 @@
 /* ============================================
    月视图组件（Month View Components）
    BEM: gc-month-view__*
-   视觉语言：软网格 — 格子间 gap 透出背景，
-   单格为圆角卡片（hairline 边框 + 悬浮阴影），
-   今天用 accent 淡染整格 + 数字反白圆徽标
+   视觉语言：网格式 — 细线分隔日期格子（border-right + border-bottom 拼合），
+   无卡片圆角/无悬浮阴影/无 gap，今天用 accent 淡染整格 + 数字反白圆徽标
    ============================================ */
 
 /* 星期标签 - Grid 第1行 */
@@ -12,11 +11,14 @@
 	font-weight: 600;
 	color: var(--text-muted);
 	text-align: center;
-	padding: 4px 4px 0;
+	padding: 4px 4px;
 	/* 确保在Grid第1行 */
 	grid-row: 1;
 	letter-spacing: 0.02em;
 	user-select: none;
+	border-right: 1px solid var(--gc-border-hairline);
+	border-bottom: 1px solid var(--gc-border-hairline);
+	background: var(--background-primary);
 }
 
 /* 空占位 - 第1行第1列 */
@@ -33,38 +35,37 @@
 	font-weight: 600;
 	color: var(--text-faint);
 	user-select: none;
+	border-right: 1px solid var(--gc-border-hairline);
+	border-bottom: 1px solid var(--gc-border-hairline);
+	background: var(--background-primary);
 	/* grid位置由组件内联样式设置 */
 }
 
 /* 日期格 — 圆角卡片 */
+/* 日格：细线网格风格——无圆角/无卡片边框/无阴影，用 border-right+bottom 拼合 */
 .gc-month-view__day-cell {
 	min-height: 100px;
 	display: flex;
 	flex-direction: column;
 	align-items: stretch;
 	justify-content: flex-start;
-	padding: 8px;
+	padding: 6px 8px;
 	gap: 2px;
 	background-color: var(--background-primary);
-	border: 1px solid var(--gc-border-hairline);
-	border-radius: var(--gc-radius-md);
+	border-right: 1px solid var(--gc-border-hairline);
+	border-bottom: 1px solid var(--gc-border-hairline);
 	cursor: pointer;
-	transition:
-		background-color var(--gc-dur-fast) var(--gc-ease-out),
-		border-color var(--gc-dur-fast) var(--gc-ease-out),
-		box-shadow var(--gc-dur-fast) var(--gc-ease-out);
+	transition: background-color var(--gc-dur-fast) var(--gc-ease-out);
 	overflow: hidden;
 }
 
 .gc-month-view__day-cell:hover {
-	border-color: var(--gc-border-strong);
-	box-shadow: var(--gc-elev-2);
 	background-color: color-mix(in srgb, var(--gc-accent) 3%, var(--background-primary));
 }
 
 .gc-month-view__day-cell:focus-visible {
 	outline: 2px solid var(--gc-accent);
-	outline-offset: 1px;
+	outline-offset: -2px;
 }
 
 /* 日期头部：数字 + 农历，左对齐、无分隔线 */
@@ -106,13 +107,10 @@
 /* 今天：accent 淡染 + 数字反白徽标 */
 .gc-month-view__day-cell--today {
 	background-color: color-mix(in srgb, var(--gc-accent) 6%, var(--background-primary));
-	border-color: color-mix(in srgb, var(--gc-accent) 40%, transparent);
 }
 
 .gc-month-view__day-cell--today:hover {
 	background-color: color-mix(in srgb, var(--gc-accent) 9%, var(--background-primary));
-	border-color: color-mix(in srgb, var(--gc-accent) 55%, transparent);
-	box-shadow: var(--gc-elev-2);
 }
 
 .gc-month-view__day-cell--today .gc-month-view__day-number {
@@ -128,7 +126,6 @@
 /* 非当月日期：整格弱化，不用透明度砸内容 */
 .gc-month-view__day-cell--outside-month {
 	background-color: var(--background-secondary);
-	opacity: 0.55;
 }
 
 .gc-month-view__day-cell--outside-month .gc-month-view__day-number {
